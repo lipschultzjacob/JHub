@@ -28,6 +28,10 @@ export const plaidItems = pgTable("plaid_items", {
   accessToken: text("access_token").notNull(),
   institutionId: text("institution_id"),
   institutionName: text("institution_name"),
+  // Plaid's /transactions/sync is cursor-based: each call returns a cursor to
+  // pass into the next call so it only returns what's changed since last time.
+  // Null means "never synced yet" -- the first sync call for this item.
+  cursor: text("cursor"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

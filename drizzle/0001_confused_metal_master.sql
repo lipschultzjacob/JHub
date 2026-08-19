@@ -1,0 +1,1 @@
+ALTER TABLE "plaid_items" ADD COLUMN "cursor" text;
