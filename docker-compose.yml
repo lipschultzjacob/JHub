@@ -1,6 +1,9 @@
-# Local-only Postgres for development. Not used in production — Railway hosts
-# the real database there. Data persists in the "jhub_pg_data" named volume,
-# so `docker compose down` (without -v) keeps your local data between restarts.
+# This file tells Docker how to run a local Postgres database for
+# development. It's local-only -- Railway will host the real database in
+# production. "jhub_pg_data" below is a named storage location Docker
+# manages for us, which is what keeps your local data around even after you
+# stop and restart the database (running `docker compose down -v` instead of
+# plain `docker compose down` would delete it).
 services:
   postgres:
     image: postgres:17-alpine

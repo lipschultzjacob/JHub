@@ -13,24 +13,32 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Page-wide info like the title shown in the browser tab, and settings for
+// how the app behaves when installed.
 export const metadata: Metadata = {
   title: "JHub",
   description: "Personal productivity hub",
-  // manifest.ts is auto-served at /manifest.webmanifest; this just points to it explicitly.
+  // manifest.ts (see that file) is already auto-served at /manifest.webmanifest;
+  // this just points to it explicitly to be safe.
   manifest: "/manifest.webmanifest",
   icons: {
-    // iOS Safari ignores the web manifest's icons for "Add to Home Screen" —
-    // it only looks for this specific link tag, so it has to be set separately.
+    // iPhones/iPads ignore the icons listed in manifest.ts when you "Add to
+    // Home Screen" -- they only look for this specific tag, so it has to be
+    // set separately here.
     apple: "/icons/apple-touch-icon.png",
   },
 };
 
-// themeColor/colorScheme live in a separate `viewport` export (not `metadata`)
-// as of Next.js 14+ — this colors the browser UI (status bar, tab bar) around the page.
+// This next.js version requires theme color to live in its own `viewport`
+// export rather than inside `metadata` above. It colors the browser/phone UI
+// (like the status bar) that surrounds the page.
 export const viewport: Viewport = {
   themeColor: "#0f172a",
 };
 
+// The shared page shell every single page in the app renders inside --
+// fonts, the <html>/<body> tags, and the service worker registration below
+// all live here once instead of being repeated on every page.
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html

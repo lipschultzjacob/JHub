@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 
 type Category = { id: number; name: string };
 
-// One dropdown per transaction row. PATCHes the category straight to the DB
-// on change -- this is the same interaction the push notification's inline
-// category picker will eventually reuse.
+// The category dropdown shown next to each transaction. Saves your choice
+// straight to the database as soon as you change it -- this is the same
+// action the push notification's built-in category picker will eventually
+// reuse.
 export function CategorySelect({
   transactionId,
   categoryId,
@@ -20,6 +21,7 @@ export function CategorySelect({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
+  // Runs when a new category is picked -- saves it, then refreshes the page's data.
   const handleChange = (value: string) => {
     startTransition(async () => {
       await fetch(`/api/transactions/${transactionId}`, {

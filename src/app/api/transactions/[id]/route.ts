@@ -3,10 +3,10 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { transactions } from "@/db/schema";
 
-// Sets (or clears, if categoryId is null) which budgeting category a
-// transaction belongs to. This is what the category picker on the
-// transactions page calls, and later what the push notification's inline
-// category picker will call too.
+// Sets (or clears, if categoryId is null) which budgeting category one
+// transaction belongs to. This is what the category dropdown on the
+// transactions page calls when you pick a category, and later this is what
+// the push notification's built-in category picker will call too.
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

@@ -1,6 +1,7 @@
-// Seeds a starter set of budgeting categories. Safe to re-run -- existing
-// names are left alone via onConflictDoNothing. Edit/extend the list below
-// and re-run (`npm run db:seed`) any time you want to add more.
+// Adds a starter set of budgeting categories to the database. Safe to run
+// more than once -- onConflictDoNothing means any category that already
+// exists (by name) just gets skipped instead of causing an error. Edit the
+// list below and re-run `npm run db:seed` any time to add more.
 import { db } from "../src/db";
 import { categories } from "../src/db/schema";
 
@@ -18,6 +19,7 @@ const DEFAULT_CATEGORIES = [
   { name: "Other", color: "#94a3b8" },
 ];
 
+// Inserts the categories above and prints how many were actually new.
 async function main() {
   const inserted = await db
     .insert(categories)

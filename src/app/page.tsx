@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+// The home page ("/") -- just a title and a link into the transactions page for now.
 export default function Home() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 bg-zinc-50 font-sans dark:bg-black">
