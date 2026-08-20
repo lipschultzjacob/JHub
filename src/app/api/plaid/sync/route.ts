@@ -3,6 +3,7 @@ import { eq, inArray, sql } from "drizzle-orm";
 import { plaidClient } from "@/lib/plaid";
 import { db } from "@/db";
 import { plaidItems, plaidAccounts, transactions } from "@/db/schema";
+import { auth } from "@/auth";
 
 // Fetches whatever transactions have changed since the last sync, for every
 // connected bank. This is a manual stand-in for the "webhook" we haven't
@@ -12,7 +13,16 @@ import { plaidItems, plaidAccounts, transactions } from "@/db/schema";
 // the UI calls this endpoint (POST /api/plaid/sync) instead, and does the
 // same work on demand.
 export async function POST() {
-  const items = await db.select().from(plaidItems);
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Only this user's own connected banks -- never touch anyone else's.
+  const items = await db
+    .select()
+    .from(plaidItems)
+    .where(eq(plaidItems.userId, Number(session.user.id)));
 
   let added = 0;
   let modified = 0;

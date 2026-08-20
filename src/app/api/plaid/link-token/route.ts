@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { CountryCode, Products } from "plaid";
 import { plaidClient } from "@/lib/plaid";
+import { auth } from "@/auth";
 
 // Creates a "link token": a short-lived, one-time-use pass that the browser
 // needs before it can open Plaid's "connect your bank" popup. This is
@@ -11,11 +12,16 @@ import { plaidClient } from "@/lib/plaid";
 // The frontend calls this endpoint (POST /api/plaid/link-token) right before
 // opening that popup.
 export async function POST() {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   // client_user_id is how Plaid tells different people apart across
-  // multiple visits. Hardcoded to one value for now since the app doesn't
-  // have logins/multiple users yet.
+  // multiple visits -- using our own logged-in user's ID keeps that
+  // consistent with who actually owns the connection.
   const response = await plaidClient.linkTokenCreate({
-    user: { client_user_id: "single-user" },
+    user: { client_user_id: session.user.id },
     client_name: "JHub",
     products: [Products.Transactions],
     country_codes: [CountryCode.Us],

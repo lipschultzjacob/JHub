@@ -1,9 +1,11 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { transactions, plaidAccounts, plaidItems, categories } from "@/db/schema";
+import { auth } from "@/auth";
 import { PlaidLinkButton } from "@/components/plaid-link-button";
 import { SyncButton } from "@/components/sync-button";
 import { CategorySelect } from "@/components/category-select";
+import { SignOutButton } from "@/components/sign-out-button";
 
 // Without this, Next.js would try to be clever and bake this page's data in
 // once at build time (since nothing here obviously changes per visit),
@@ -20,13 +22,25 @@ export const dynamic = "force-dynamic";
 // browser. Only the interactive pieces further down (the connect button,
 // sync button, category dropdowns) are separate "Client Components" that do
 // run in the browser, since only they need to react to clicks.
+//
+// The middleware (src/middleware.ts) already guarantees no one reaches this
+// page without being logged in, so session.user is safe to assume exists here.
 export default async function TransactionsPage() {
-  // Which banks are already connected, and what categories exist to choose from.
-  const items = await db.select().from(plaidItems);
-  const allCategories = await db.select().from(categories);
+  const session = await auth();
+  const userId = Number(session!.user.id);
 
-  // The actual transaction list, newest first, with each row's account name
-  // attached (a "join" -- pulling in a related piece of data from another table).
+  // Which banks this user has connected, and their own categories to choose from.
+  const items = await db.select().from(plaidItems).where(eq(plaidItems.userId, userId));
+  const allCategories = await db
+    .select()
+    .from(categories)
+    .where(eq(categories.userId, userId));
+
+  // This user's transactions, newest first, with each row's account name
+  // attached (a "join" -- pulling in a related piece of data from another
+  // table). The two inner joins here aren't just for the account name --
+  // they're also what makes it possible to filter down to only transactions
+  // that trace back to this specific user's bank connections.
   const rows = await db
     .select({
       id: transactions.id,
@@ -39,12 +53,20 @@ export default async function TransactionsPage() {
       accountName: plaidAccounts.name,
     })
     .from(transactions)
-    .leftJoin(plaidAccounts, eq(transactions.plaidAccountId, plaidAccounts.id))
+    .innerJoin(plaidAccounts, eq(transactions.plaidAccountId, plaidAccounts.id))
+    .innerJoin(plaidItems, eq(plaidAccounts.plaidItemId, plaidItems.id))
+    .where(eq(plaidItems.userId, userId))
     .orderBy(desc(transactions.date));
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
-      <h1 className="text-2xl font-semibold">Transactions</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Transactions</h1>
+        <div className="flex items-center gap-3 text-sm text-zinc-400">
+          <span>{session!.user.email}</span>
+          <SignOutButton />
+        </div>
+      </div>
 
       <div className="mt-6 flex items-center gap-4">
         <PlaidLinkButton />

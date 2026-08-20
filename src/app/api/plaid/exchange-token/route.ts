@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { plaidClient } from "@/lib/plaid";
 import { db } from "@/db";
 import { plaidItems, plaidAccounts } from "@/db/schema";
+import { auth } from "@/auth";
 
 // Finishes connecting a bank account. The frontend calls this
 // (POST /api/plaid/exchange-token) right after Plaid's popup succeeds,
@@ -11,6 +12,11 @@ import { plaidItems, plaidAccounts } from "@/db/schema";
 // every future request about this bank connection. From this point on,
 // access_token stays on the server and is never sent back to the browser.
 export async function POST(request: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { publicToken, institutionId, institutionName } = await request.json();
 
   // Trade the temporary public_token for the real, long-lived access_token.
@@ -24,6 +30,7 @@ export async function POST(request: Request) {
   const [item] = await db
     .insert(plaidItems)
     .values({
+      userId: Number(session.user.id),
       plaidItemId,
       accessToken,
       institutionId,

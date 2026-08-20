@@ -13,25 +13,49 @@ import {
   boolean,
   date,
   timestamp,
+  unique,
 } from "drizzle-orm/pg-core";
 
-// Budgeting categories you sort transactions into (e.g. "Groceries", "Rent").
-// There's no user_id column yet, because the app only supports one person
-// for now. Once login (Auth.js) is built, a users table and a user_id
-// column will get added here.
-export const categories = pgTable("categories", {
+// One row per person who can log in. passwordHash is never the actual
+// password -- it's a scrambled, one-way version of it (created by bcrypt)
+// that can be checked against but never turned back into the real password,
+// even by us. That way, even if this table were ever leaked, the real
+// passwords stay safe.
+export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
-  color: text("color"), // a hex color code for displaying this category in the UI, e.g. "#f97316"
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-// One row per bank you've connected through Plaid. accessToken is the
+// Budgeting categories you sort transactions into (e.g. "Groceries", "Rent").
+// Each belongs to one user, so different people can have entirely different
+// sets of categories. The `unique` line below means a name only has to be
+// unique per-user, not across the whole app -- two different users can each
+// have their own "Groceries" category without conflicting.
+export const categories = pgTable(
+  "categories",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    color: text("color"), // a hex color code for displaying this category in the UI, e.g. "#f97316"
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [unique().on(table.userId, table.name)]
+);
+
+// One row per bank a user has connected through Plaid. accessToken is the
 // long-lived secret credential Plaid gives us to fetch data for that
 // specific bank connection going forward -- treat it exactly like a
 // password: never log it, and never send it to the browser.
 export const plaidItems = pgTable("plaid_items", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   plaidItemId: text("plaid_item_id").notNull().unique(), // the ID Plaid itself uses for this connection
   accessToken: text("access_token").notNull(),
   institutionId: text("institution_id"),
@@ -46,7 +70,10 @@ export const plaidItems = pgTable("plaid_items", {
 
 // A single account (checking, savings, credit card, ...) belonging to one
 // connected bank. One bank connection (one plaidItems row) can have several
-// accounts attached to it.
+// accounts attached to it. There's no separate userId column here -- since
+// every account belongs to a plaidItems row, and every plaidItems row
+// already belongs to a user, we can always find the owner by following that
+// link rather than repeating it on every table.
 export const plaidAccounts = pgTable("plaid_accounts", {
   id: serial("id").primaryKey(),
   // "references" here creates a foreign key: a link that guarantees every

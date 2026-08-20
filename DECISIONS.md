@@ -206,3 +206,47 @@ now anyway, it was safer to wait than to guess.
 **Follow-up:** once Auth.js gets wired up, its required tables get added, plus a `user_id` column
 on the Plaid-related tables, through a new migration (a tracked, versioned change to the
 database's structure).
+
+---
+
+## 2026-08-20 — Auth.js implemented: email+password, JWT sessions, signup page included
+
+**Decision:** Follow-up to the entry above -- login is now built. It uses Auth.js's "Credentials"
+provider (a plain email+password form, not social login), "JWT" sessions (login state stored in an
+encrypted browser cookie rather than a database table), and includes a public signup page rather
+than seeding one single account by script.
+
+**Why:** Email+password needs no outside service (no email-sending setup, no Google Cloud Console
+app registration) and is the simplest to test locally. JWT sessions need no extra database table
+and are simpler to wire up; the tradeoff accepted is that there's no way to force one specific
+session to log out early other than changing the account's password. The signup page was a
+deliberate choice over a single hand-seeded account (the safer default for a personal single-user
+app) -- since the app is now open to being used by more than one person, categories and bank
+connections were also changed to be scoped per-user rather than shared globally (see the
+`user_id` columns added to `categories` and `plaid_items` in this same change).
+
+**Alternatives considered:** Magic-link (passwordless) email login -- no password to manage, but
+needs an email-sending service (like Resend) configured even just for local testing. Google
+OAuth sign-in -- very secure, but needs a Google Cloud Console app set up first. Database sessions
+instead of JWT -- more setup (a sessions table) but allows revoking one session directly, generally
+considered more secure for sensitive data; skipped for now given the added setup. No public signup
+page (just one script-seeded account) -- safer default for a single-user app, but not chosen since
+multi-user use is now on the table.
+
+**Follow-up:** there's no "forgot password" flow yet -- losing your password currently means losing
+access to your account. No email-sending service is configured, which is what a reset flow would need.
+
+---
+
+## 2026-08-20 — `proxy.ts`, not `middleware.ts`
+
+**Decision:** The file that protects pages by redirecting signed-out visitors to `/login` is named
+`src/proxy.ts`, using an exported function named `proxy` -- not the `middleware.ts` name/convention
+that's standard in most Next.js tutorials and training material.
+
+**Why:** This isn't really a tradeoff decision so much as a note for later: this specific version of
+Next.js (16) renamed that file convention from `middleware` to `proxy` (the docs bundled in this
+project, at `node_modules/next/dist/docs/`, explain the reasoning -- avoiding confusion with
+Express.js's unrelated concept of "middleware"). Using the old `middleware.ts` name still mostly
+works but prints a deprecation warning during build. Worth remembering if this ever gets confusing
+compared to outside documentation/tutorials that still say `middleware.ts`.

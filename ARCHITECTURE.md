@@ -20,7 +20,7 @@ explained the first time they show up.
 | Styling        | Tailwind CSS — write styling directly as class names on elements instead of separate `.css` files |
 | Database       | PostgreSQL (Postgres for short) — where all persistent data (transactions, categories, etc.) is stored |
 | ORM            | Drizzle — a library that lets us describe and query the database using TypeScript instead of writing raw SQL by hand ("ORM" = Object-Relational Mapper, the general name for this kind of tool) |
-| Auth           | Auth.js (NextAuth) — a login/session library. Not implemented yet, so right now there is no login screen protecting anything |
+| Auth           | Auth.js (NextAuth) — a login/session library, using email+password and encrypted-cookie ("JWT") sessions |
 | Bank data      | Plaid — a service that connects to your bank on our behalf and hands us transaction data, without us ever seeing your bank password |
 | Push           | Web Push — the browser's built-in system for sending notifications, using a standard called VAPID to prove the notification really came from this app. No third-party notification service (like Firebase) involved |
 | Hosting target | Railway — the cloud service we plan to deploy the live app and database to |
@@ -37,9 +37,14 @@ JHub/
 │   │   ├── layout.tsx            the shared page shell every page renders inside (fonts, page title, registers the service worker below)
 │   │   ├── page.tsx               the home page, served at "/"
 │   │   ├── manifest.ts            describes the app for "install as an app" purposes, auto-served at /manifest.webmanifest
+│   │   ├── login/page.tsx          the login form
+│   │   ├── signup/page.tsx         the create-account form
 │   │   ├── transactions/
 │   │   │   └── page.tsx          the transactions page: connect a bank, view transactions, assign categories
 │   │   └── api/                  backend endpoints the frontend calls (no separate backend project needed)
+│   │       ├── auth/
+│   │       │   ├── [...nextauth]/ Auth.js's own required routes (login, logout, session check, etc.)
+│   │       │   └── signup/        creates a new account (Auth.js only handles logging in, not registration)
 │   │       ├── plaid/
 │   │       │   ├── link-token/    creates a short-lived token so the browser can open Plaid's "connect your bank" popup
 │   │       │   ├── exchange-token/ turns that popup's result into a real, long-lived connection to your bank
@@ -47,18 +52,25 @@ JHub/
 │   │       └── transactions/[id]/ lets the frontend set which category a transaction belongs to
 │   ├── components/               Interactive pieces of the UI (buttons, dropdowns) that run in the browser
 │   │   ├── service-worker-registration.tsx
+│   │   ├── auth-session-provider.tsx  makes the current login session available throughout the app
+│   │   ├── sign-out-button.tsx
 │   │   ├── plaid-link-button.tsx
 │   │   ├── sync-button.tsx
 │   │   └── category-select.tsx
 │   ├── db/
 │   │   ├── schema.ts              defines the shape of every database table in TypeScript — this file is the single source of truth for what the database looks like
 │   │   └── index.ts               sets up the connection to the database that the rest of the app uses
-│   └── lib/
-│       └── plaid.ts               configuration for talking to Plaid's API
+│   ├── lib/
+│   │   ├── plaid.ts               configuration for talking to Plaid's API
+│   │   └── default-categories.ts  the starter category list given to every new account
+│   ├── types/
+│   │   └── next-auth.d.ts         small type addition so TypeScript knows about the user ID we attach to sessions
+│   ├── auth.ts                    Auth.js configuration: how login works, what a session contains
+│   └── proxy.ts                   runs before every page request; redirects signed-out visitors to /login (see "Login" below)
 ├── drizzle/                      Auto-generated files describing each change ever made to the database's structure (a "migration" — see Database section). Don't hand-edit these; they're regenerated from schema.ts
 ├── scripts/
 │   ├── generate-icons.mjs        regenerates the app's icon images (currently simple placeholders — rerun this once real branding/logo exists)
-│   └── seed-categories.ts        fills in a starter set of budgeting categories; safe to run more than once
+│   └── seed-categories.ts        adds the default categories to one existing account by email (new accounts get these automatically at signup instead)
 ├── public/
 │   ├── sw.js                     the service worker (explained below)
 │   └── icons/                    icon image files used by manifest.ts and layout.tsx
@@ -95,6 +107,25 @@ home screen, opens in its own window, works partly offline).
   falls back to that saved copy if you're offline, and has placeholder handlers ready for push
   notifications once that feature is built.
 
+### Login
+Every page except `/login` and `/signup` requires being logged in. `src/proxy.ts` (in this Next.js
+version, the file that used to be called `middleware.ts` -- it runs before a page is rendered) checks
+for a valid session and redirects to `/login` if there isn't one. On top of that, every API route
+under `src/app/api/plaid/` and `src/app/api/transactions/` also checks the session itself and
+returns a `401 Unauthorized` if it's missing -- this isn't redundant: Next.js's own docs specifically
+warn that a future change to `proxy.ts`'s matcher could silently stop protecting a route, so each
+route protects itself rather than trusting that file alone.
+
+Logging in uses Auth.js's "Credentials" provider (a plain email+password form) --
+`src/auth.ts` contains the actual logic that checks a typed-in password against the scrambled
+version stored in the `users` table (see Database below). Auth.js doesn't handle creating new
+accounts itself, only logging in, so `POST /api/auth/signup` is a small custom-written endpoint
+that creates the account (and gives it a starter set of categories) before immediately logging it in.
+
+Sessions use the "JWT" strategy: your logged-in state lives in an encrypted browser cookie rather
+than a database row, which is simpler to set up but means there's no way to remotely force one
+specific session to log out (changing your password is the only way to invalidate a session early).
+
 ### Database
 During development, the app talks to a Postgres database running locally in Docker
 (`docker-compose.yml`), started with `docker compose up -d`. In production it'll talk to a
@@ -105,16 +136,24 @@ edit `src/db/schema.ts` → run `npm run db:generate` (this writes a "migration"
 exactly what changed — into the `drizzle/` folder) → run `npm run db:migrate` (this applies that
 change to the actual database). Never hand-edit the generated migration files.
 
-Current tables (there's no `users` table yet, because the app is single-user for now; a `users`
-table gets added once Auth.js/login is built):
-- `categories` — the budgeting categories you sort transactions into (starter ones are added by
-  `npm run db:seed`)
-- `plaid_items` — one row per bank you've connected; holds the credential Plaid gave us for that
-  connection and a bookmark ("cursor," see below) of how far we've synced
+Current tables:
+- `users` — one row per person who can log in; stores their email and a scrambled (never
+  reversible) version of their password
+- `categories` — the budgeting categories you sort transactions into, one set per user (new
+  accounts get a starter set automatically at signup; `npm run db:seed -- you@example.com` can
+  re-add them to an existing account)
+- `plaid_items` — one row per bank a user has connected; holds the credential Plaid gave us for
+  that connection and a bookmark ("cursor," see below) of how far we've synced
 - `plaid_accounts` — the individual accounts (checking, savings, etc.) that belong to a connected
   bank
 - `transactions` — one row per transaction, linked to which account it came from and (optionally)
   which category you assigned it
+
+`categories` and `plaid_items` have a `user_id` column directly. `plaid_accounts` and
+`transactions` don't repeat it -- their owner is found by following the chain down to `plaid_items`
+instead (e.g. a transaction's owner is whoever owns the `plaid_items` row its account belongs to).
+Every query that lists or edits this data filters (or double-checks ownership) using that chain, so
+one user's data is never visible or editable by another.
 
 ### How the Plaid (bank) integration works, step by step
 1. The frontend asks our own backend for a "link token" (`POST /api/plaid/link-token`) — a
@@ -151,12 +190,13 @@ never committed to git), so things like passwords aren't stored in the codebase 
 | `DATABASE_URL` | How to connect to the Postgres database |
 | `PLAID_CLIENT_ID` / `PLAID_SECRET` | Credentials that prove to Plaid this app is allowed to use their API |
 | `PLAID_ENV` | Which Plaid environment to talk to: `sandbox` (fake test data), `development`, or `production` (real banks) |
+| `AUTH_SECRET` | Used to encrypt login session cookies |
 
 See `.env.example` for the template; real values go in `.env.local` (which is excluded from git).
 
 ## Not yet built
-- Login/authentication (Auth.js) — everything is currently open to anyone who can reach the app; it
-  should not be put on a public web address as-is
 - The Plaid webhook + push notification delivery described above (the original goal of this
   feature — the manual sync button is a placeholder for it)
 - Todos/scheduling and any other planned productivity-hub features beyond the financial tracking
+- Any way to reset a forgotten password (there's no "forgot password" email flow yet -- losing your
+  password currently means losing access)
