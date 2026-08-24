@@ -250,3 +250,44 @@ project, at `node_modules/next/dist/docs/`, explain the reasoning -- avoiding co
 Express.js's unrelated concept of "middleware"). Using the old `middleware.ts` name still mostly
 works but prints a deprecation warning during build. Worth remembering if this ever gets confusing
 compared to outside documentation/tutorials that still say `middleware.ts`.
+
+---
+
+## 2026-08-20 — Switched hosting from Railway to Vercel + Neon
+
+**Decision:** Reverses the [2026-08-19 Railway decision](#2026-08-19--railway-for-hosting) above.
+The app now deploys to Vercel, with the production Postgres database on Neon, instead of Railway
+hosting both.
+
+**Why:** Checked Railway's actual current pricing rather than assuming -- their free tier only
+includes $1/month of usage credit, nowhere near enough to keep an app and a database running
+continuously; realistically it costs around $5/month. Vercel's Hobby tier and Neon's free tier are
+both genuinely free indefinitely for personal-project usage levels, no credit card or trial expiry
+involved. Since cost (not convenience) turned out to be the deciding factor, and the original
+Railway entry already noted Vercel+Neon as the runner-up alternative, this switches to it.
+
+**Tradeoff accepted:** two separate dashboards to manage instead of one (the very reason Railway was
+originally preferred). Also, Neon's free database "pauses" after 5 minutes of no activity and takes
+about a second to wake back up on the next request -- a barely-noticeable delay for a personal app,
+not a functional problem.
+
+---
+
+## 2026-08-24 — Database/Plaid clients connect lazily, not at import time
+
+**Decision:** `src/db/index.ts` and `src/lib/plaid.ts` no longer create their actual connection the
+moment the file is imported. Instead they export a "Proxy" (a wrapper object that only does real
+work once something on it is actually used) that builds the real connection on first use.
+
+**Why:** The first real deployment attempt failed with "DATABASE_URL is not set" even though it was
+genuinely set correctly in Vercel. The cause: Vercel treats secrets like `DATABASE_URL` and
+`PLAID_SECRET` as "Sensitive," which means they're only handed to the app while it's actually
+serving a real request -- not during the build step beforehand. The old code checked for (and used)
+these variables the instant the file was imported, which happens during Vercel's build, before any
+request exists -- so the check always failed there even with correct values configured. Delaying
+the actual connection until a request comes in and something on `db`/`plaidClient` is really used
+fixes this without weakening the variables to a less-protected type.
+
+**Follow-up:** worth remembering this pattern for any future file that reads a secret at the top
+level of a module -- do the actual check/connection lazily (inside a function, only called when
+truly needed) rather than immediately when the file loads.

@@ -23,7 +23,7 @@ explained the first time they show up.
 | Auth           | Auth.js (NextAuth) — a login/session library, using email+password and encrypted-cookie ("JWT") sessions |
 | Bank data      | Plaid — a service that connects to your bank on our behalf and hands us transaction data, without us ever seeing your bank password |
 | Push           | Web Push — the browser's built-in system for sending notifications, using a standard called VAPID to prove the notification really came from this app. No third-party notification service (like Firebase) involved |
-| Hosting target | Railway — the cloud service we plan to deploy the live app and database to |
+| Hosting       | Vercel (the app) + Neon (the production Postgres database) — both free indefinitely for personal-project usage levels |
 | Local dev DB   | A Postgres database running locally in Docker (a tool that runs an isolated copy of a program, here Postgres, on your own machine without installing it directly) |
 
 See [DECISIONS.md](DECISIONS.md) for the reasoning behind each of these.
@@ -129,7 +129,7 @@ specific session to log out (changing your password is the only way to invalidat
 ### Database
 During development, the app talks to a Postgres database running locally in Docker
 (`docker-compose.yml`), started with `docker compose up -d`. In production it'll talk to a
-Postgres database hosted on Railway instead, via the `DATABASE_URL` setting.
+Postgres database hosted on Neon instead, via the `DATABASE_URL` setting.
 
 Whenever the shape of the database needs to change (a new table, a new column), the process is:
 edit `src/db/schema.ts` → run `npm run db:generate` (this writes a "migration" — a file recording
