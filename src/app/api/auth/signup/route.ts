@@ -34,13 +34,26 @@ export async function POST(request: Request) {
       .values({ email, passwordHash })
       .returning({ id: users.id });
     userId = user.id;
-  } catch {
-    // The database rejects this insert if the email is already taken
-    // (users.email has a unique constraint) -- that's the only likely
-    // reason this would fail here.
+  } catch (err) {
+    // Postgres error code 23505 specifically means "unique constraint
+    // violated" -- that's the real signal that this email is already taken
+    // (users.email has a unique constraint). Anything else is a genuine,
+    // different failure (e.g. a database connection problem) and should
+    // NOT be reported to the user as "email taken" -- that would be
+    // actively misleading. It's logged here so it shows up in Vercel's
+    // function logs for debugging, and reported as a generic server error.
+    const isDuplicateEmail =
+      typeof err === "object" && err !== null && "code" in err && err.code === "23505";
+    if (isDuplicateEmail) {
+      return NextResponse.json(
+        { error: "An account with that email already exists" },
+        { status: 409 }
+      );
+    }
+    console.error("Signup failed:", err);
     return NextResponse.json(
-      { error: "An account with that email already exists" },
-      { status: 409 }
+      { error: "Something went wrong creating your account" },
+      { status: 500 }
     );
   }
 
