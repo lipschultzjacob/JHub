@@ -291,3 +291,33 @@ fixes this without weakening the variables to a less-protected type.
 **Follow-up:** worth remembering this pattern for any future file that reads a secret at the top
 level of a module -- do the actual check/connection lazily (inside a function, only called when
 truly needed) rather than immediately when the file loads.
+
+---
+
+## 2026-08-24 — Vercel secrets stored as "Non-sensitive," not "Sensitive"
+
+**Decision:** `DATABASE_URL`, `PLAID_CLIENT_ID`, `PLAID_SECRET`, and `AUTH_SECRET` are stored in
+Vercel as regular ("Non-sensitive") environment variables, not using Vercel's "Sensitive" variable
+type, even though all four are genuine secrets.
+
+**Why:** After fixing the lazy-connection issue above, deploying still failed -- this time with the
+*running* app (not just the build) reporting `DATABASE_URL is not set`, confirmed directly from
+Vercel's function logs. Vercel's own documentation doesn't describe this restriction, but testing it
+directly settled it: recreating `DATABASE_URL` as a plain ("Non-sensitive") variable fixed it
+immediately, on this project/plan. In practice here, a Sensitive-typed variable simply wasn't
+showing up in `process.env` at runtime at all, not just during the build. Rather than keep guessing
+at undocumented behavior, the fix was to test it directly and go with what's actually observed to
+work.
+
+**Tradeoff accepted:** "Non-sensitive" variables can be viewed again later (unlike "Sensitive" ones,
+which become permanently unreadable once saved) by anyone with dashboard/CLI access to this Vercel
+project -- currently just this account, so low real risk for a personal project. Values are still
+encrypted at rest and hidden from build logs either way; this only affects whether a value can ever
+be viewed again after creation, not whether it's protected in general.
+
+**Related:** while investigating this, a separate, unrelated issue was found and fixed: Vercel's own
+"Deployment Protection" (an SSO wall Vercel puts in front of the default `*.vercel.app` domain by
+default) was blocking every request -- including ones from Plaid and from you, not just casual
+visitors. This is a Vercel-level gate, completely separate from this app's own Auth.js login, and
+was disabled for this project (`vercel project protection disable j-hub --sso`) so the app is
+actually reachable. Our own login is still the real protection for account/financial data.

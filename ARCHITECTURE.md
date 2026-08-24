@@ -193,6 +193,34 @@ never committed to git), so things like passwords aren't stored in the codebase 
 | `AUTH_SECRET` | Used to encrypt login session cookies |
 
 See `.env.example` for the template; real values go in `.env.local` (which is excluded from git).
+Production values for these same variables live in Vercel's project settings instead, added via
+`vercel env add` -- see DECISIONS.md for why they're stored as "Non-sensitive" there rather than
+Vercel's more locked-down "Sensitive" type, and `.env.production.local` (also gitignored, never
+committed) for the one local copy of the production database URL, used only to run migrations
+against it directly from your machine.
+
+## Deployment
+
+The app is live at **https://j-hub-lippy-industries.vercel.app**, deployed to Vercel (project
+`j-hub` under the `lippy-industries` account) with its database on Neon. Pushing to `main` on
+GitHub automatically triggers a new deploy -- there's no separate manual step.
+
+When the database's shape changes (`src/db/schema.ts` edited, a new migration generated), that
+migration also has to be applied to the *production* database separately from your local one:
+
+```
+PROD_DB_URL="$(grep '^DATABASE_URL=' .env.production.local | cut -d= -f2-)"
+DATABASE_URL="$PROD_DB_URL" npx drizzle-kit migrate
+```
+
+(Extracted this way rather than just `source .env.production.local` because the connection string
+contains an `&` character, which a shell interprets as "run this in the background" unless handled
+carefully -- that mistake silently pointed an earlier migration at the wrong database.)
+
+Vercel's "Deployment Protection" (an SSO wall Vercel puts in front of the default `*.vercel.app`
+domain) is turned off for this project, since it would otherwise block Plaid's webhook -- and you --
+from ever reaching the app. This app's own Auth.js login is what actually protects account and
+financial data now.
 
 ## Not yet built
 - The Plaid webhook + push notification delivery described above (the original goal of this
