@@ -321,3 +321,45 @@ default) was blocking every request -- including ones from Plaid and from you, n
 visitors. This is a Vercel-level gate, completely separate from this app's own Auth.js login, and
 was disabled for this project (`vercel project protection disable j-hub --sso`) so the app is
 actually reachable. Our own login is still the real protection for account/financial data.
+
+---
+
+## 2026-08-26 — Notifications open the app to categorize, not in-notification buttons
+
+**Decision:** Tapping a transaction push notification opens the app straight to that transaction
+(`/transactions#transaction-<id>`) rather than showing category choices as buttons directly on the
+notification itself.
+
+**Why:** Browsers do support putting a couple of quick-action buttons directly on a notification
+(no need to open the app at all), but the limits make it a poor fit for "pick one of several
+budgeting categories": only about 2 actions fit on a notification, and iOS doesn't support
+notification actions at all -- so it wouldn't actually deliver "categorize in the notification" on
+every device anyway, only a partial version of it on some. The simpler, universal version (one tap
+to open, one more tap to categorize) works identically everywhere and was chosen as the starting
+point.
+
+**Alternatives considered:** ~2 quick-action buttons for your most-used categories, with everything
+else still requiring the app -- could be added later on top of this without changing the underlying
+notification-sending code, since it's an additive change to what's included in the notification
+payload, not a different architecture.
+
+---
+
+## 2026-08-26 — Plaid webhook signature verification, done properly rather than skipped
+
+**Decision:** `POST /api/plaid/webhook` verifies that every incoming request is genuinely signed by
+Plaid (`src/lib/plaid-webhook-verify.ts`, using the `jose` library) before acting on it, rather than
+trusting any request that arrives at that URL.
+
+**Why:** This endpoint has to be publicly reachable for Plaid to call it automatically -- which also
+means anyone who discovers the URL could otherwise send a fake "you have a new transaction" message
+and trigger a real push notification (and a real Plaid API sync call) without actually being Plaid.
+Plaid signs every webhook with a JWT (a signed token) containing a fingerprint of the exact request
+body; verifying it (checking the signature against Plaid's published public key, checking it isn't
+old/replayed, and checking the fingerprint matches what we actually received) is Plaid's documented
+way to confirm a webhook is real.
+
+**Follow-up:** the verification key is cached in memory per server instance rather than re-fetched
+from Plaid on every webhook (Plaid asks integrators not to do that) -- fine for personal-scale
+traffic; would need a shared cache (e.g. in the database, or a dedicated cache service) if this ever
+ran across many server instances handling heavy webhook volume.

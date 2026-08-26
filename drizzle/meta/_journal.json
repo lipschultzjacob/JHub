@@ -22,6 +22,13 @@
       "when": 1787242080000,
       "tag": "0002_clammy_lizard",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1787771052464,
+      "tag": "0003_brown_lester",
+      "breakpoints": true
     }
   ]
 }

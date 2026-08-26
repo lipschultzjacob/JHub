@@ -6,6 +6,7 @@ import { PlaidLinkButton } from "@/components/plaid-link-button";
 import { SyncButton } from "@/components/sync-button";
 import { CategorySelect } from "@/components/category-select";
 import { SignOutButton } from "@/components/sign-out-button";
+import { PushSubscribeButton } from "@/components/push-subscribe-button";
 
 // Without this, Next.js would try to be clever and bake this page's data in
 // once at build time (since nothing here obviously changes per visit),
@@ -71,6 +72,7 @@ export default async function TransactionsPage() {
       <div className="mt-6 flex items-center gap-4">
         <PlaidLinkButton />
         {items.length > 0 && <SyncButton />}
+        <PushSubscribeButton />
       </div>
 
       {items.length === 0 && (
@@ -84,7 +86,14 @@ export default async function TransactionsPage() {
 
       <div className="mt-8 divide-y divide-white/10">
         {rows.map((row) => (
-          <div key={row.id} className="flex items-center justify-between gap-4 py-3">
+          <div
+            key={row.id}
+            id={`transaction-${row.id}`}
+            // target:target-current highlights whichever row matches the
+            // page's #transaction-<id> URL fragment -- how the push
+            // notification points you straight at the transaction it's about.
+            className="flex scroll-mt-6 items-center justify-between gap-4 py-3 target:bg-white/5"
+          >
             <div className="min-w-0">
               <div className="truncate font-medium">
                 {row.merchantName ?? row.name}

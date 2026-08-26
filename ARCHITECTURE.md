@@ -48,7 +48,10 @@ JHub/
 │   │       ├── plaid/
 │   │       │   ├── link-token/    creates a short-lived token so the browser can open Plaid's "connect your bank" popup
 │   │       │   ├── exchange-token/ turns that popup's result into a real, long-lived connection to your bank
-│   │       │   └── sync/          fetches new transactions from Plaid (currently triggered manually by a button, see below)
+│   │       │   ├── sync/          fetches new transactions from Plaid (manual fallback -- the webhook below does this automatically)
+│   │       │   └── webhook/       Plaid calls this automatically the moment a new transaction happens
+│   │       ├── push/
+│   │       │   └── subscribe/     saves/removes a browser's push notification subscription
 │   │       └── transactions/[id]/ lets the frontend set which category a transaction belongs to
 │   ├── components/               Interactive pieces of the UI (buttons, dropdowns) that run in the browser
 │   │   ├── service-worker-registration.tsx
@@ -56,12 +59,16 @@ JHub/
 │   │   ├── sign-out-button.tsx
 │   │   ├── plaid-link-button.tsx
 │   │   ├── sync-button.tsx
+│   │   ├── push-subscribe-button.tsx  turns on push notifications for this browser
 │   │   └── category-select.tsx
 │   ├── db/
 │   │   ├── schema.ts              defines the shape of every database table in TypeScript — this file is the single source of truth for what the database looks like
 │   │   └── index.ts               sets up the connection to the database that the rest of the app uses
 │   ├── lib/
 │   │   ├── plaid.ts               configuration for talking to Plaid's API
+│   │   ├── plaid-sync.ts          the actual "fetch new transactions and save them" logic, shared by the manual sync button and the webhook
+│   │   ├── plaid-webhook-verify.ts confirms an incoming webhook request genuinely came from Plaid
+│   │   ├── web-push.ts            sends a push notification to one saved subscription
 │   │   └── default-categories.ts  the starter category list given to every new account
 │   ├── types/
 │   │   └── next-auth.d.ts         small type addition so TypeScript knows about the user ID we attach to sessions
@@ -104,8 +111,8 @@ home screen, opens in its own window, works partly offline).
   development it's deliberately turned off, because a service worker's caching would otherwise make
   it look like your code changes aren't taking effect while you're actively editing. Right now it:
   saves a copy of the home page for offline use, prefers fetching fresh data over the network but
-  falls back to that saved copy if you're offline, and has placeholder handlers ready for push
-  notifications once that feature is built.
+  falls back to that saved copy if you're offline, and (see "Push notifications" below) actually
+  receives and displays push notifications, opening the app to the relevant transaction when tapped.
 
 ### Login
 Every page except `/login` and `/signup` requires being logged in. `src/proxy.ts` (in this Next.js
@@ -148,8 +155,10 @@ Current tables:
   bank
 - `transactions` — one row per transaction, linked to which account it came from and (optionally)
   which category you assigned it
+- `push_subscriptions` — one row per browser/device that's agreed to receive push notifications for
+  a user (someone could have several: phone, laptop, ...)
 
-`categories` and `plaid_items` have a `user_id` column directly. `plaid_accounts` and
+`categories`, `plaid_items`, and `push_subscriptions` have a `user_id` column directly. `plaid_accounts` and
 `transactions` don't repeat it -- their owner is found by following the chain down to `plaid_items`
 instead (e.g. a transaction's owner is whoever owns the `plaid_items` row its account belongs to).
 Every query that lists or edits this data filters (or double-checks ownership) using that chain, so
@@ -165,20 +174,40 @@ one user's data is never visible or editable by another.
    connection credential (the `access_token`) — this step has to happen on the server because that
    credential is a secret that should never reach the browser. It's saved to `plaid_items`, and the
    bank's individual accounts are fetched and saved to `plaid_accounts`.
-4. Clicking "Sync transactions" calls `POST /api/plaid/sync`, which asks Plaid for anything new
-   since last time. Plaid's sync API works with a "cursor" — think of it like a bookmark: each
-   response comes with a new cursor to save and send back next time, so Plaid only has to tell us
-   what changed instead of resending everything. New/changed transactions are saved with an
-   "upsert" (insert it if it's new, update it if it already exists) — and updating deliberately
-   never overwrites a category you already picked by hand.
+4. From here, new transactions get fetched one of two ways. Automatically: Plaid calls
+   `POST /api/plaid/webhook` itself the instant something changes (see "Push notifications" below).
+   Manually: clicking "Sync transactions" calls `POST /api/plaid/sync` and does the same fetch on
+   demand -- useful for testing, or as a fallback if a webhook notification is ever missed. Both
+   routes call the same shared function (`syncPlaidItem` in `src/lib/plaid-sync.ts`) to actually do
+   the work, so the fetching logic itself only exists in one place. That function asks Plaid for
+   anything new since last time using a "cursor" — think of it like a bookmark: each response comes
+   with a new cursor to save and send back next time, so Plaid only has to tell us what changed
+   instead of resending everything. New/changed transactions are saved with an "upsert" (insert it
+   if it's new, update it if it already exists) — and updating deliberately never overwrites a
+   category you already picked by hand.
 5. The category dropdown on the transactions page calls `PATCH /api/transactions/[id]` to save
    which category you picked.
 
-**Known gap:** step 4 currently requires clicking a button. The actual goal is for Plaid to notify
-us the moment a new transaction happens (a "webhook" — Plaid calling *our* server automatically),
-which would then send you a push notification with a category picker built in. That needs our
-server to have a public web address Plaid can reach, which it doesn't yet (it only exists on your
-own machine right now) — so this is still ahead of us.
+### Push notifications
+The actual "notify me the moment I spend money" feature. Three pieces:
+
+1. **Registering with Plaid.** When a link token is created (step 1 above), it includes a `webhook`
+   URL (only when `APP_URL` is configured -- see Environment variables) pointing at
+   `POST /api/plaid/webhook`. Plaid remembers this per connection and calls it automatically.
+2. **Subscribing this browser.** Clicking "Enable notifications" (`PushSubscribeButton`) asks the
+   browser for notification permission, then uses the browser's own Web Push API to create a
+   subscription (an address + two encryption keys unique to this browser). That gets saved via
+   `POST /api/push/subscribe` into `push_subscriptions`. Someone can have several of these (phone,
+   laptop, ...) since each browser subscribes independently.
+3. **Sending the notification.** When Plaid calls `POST /api/plaid/webhook`, that route first checks
+   the request is genuinely from Plaid (`src/lib/plaid-webhook-verify.ts` verifies a signed token
+   Plaid attaches to every webhook -- without this, anyone who found the URL could fake a "new
+   transaction" message), then runs the same sync logic as the manual button, then sends a push
+   notification (`src/lib/web-push.ts`, using the VAPID keys) to every one of that user's saved
+   subscriptions. `public/sw.js`'s `push` handler is what actually displays it, and tapping it opens
+   the app straight to that transaction (`/transactions#transaction-<id>`) to categorize it there --
+   full in-notification category buttons were considered but skipped for now (see DECISIONS.md):
+   browsers only allow ~2 actions directly on a notification, and iOS doesn't support them at all.
 
 ## Environment variables
 
@@ -191,6 +220,8 @@ never committed to git), so things like passwords aren't stored in the codebase 
 | `PLAID_CLIENT_ID` / `PLAID_SECRET` | Credentials that prove to Plaid this app is allowed to use their API |
 | `PLAID_ENV` | Which Plaid environment to talk to: `sandbox` (fake test data), `development`, or `production` (real banks) |
 | `AUTH_SECRET` | Used to encrypt login session cookies |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Web Push credentials -- prove notifications from this app are genuinely from this app. The public key is safe for the browser to see (hence `NEXT_PUBLIC_`); the private key is not |
+| `APP_URL` | This app's real public web address, e.g. `https://j-hub-lippy-industries.vercel.app`. Used to tell Plaid where to send webhooks. Unset locally, since local dev has no public address for Plaid to reach |
 
 See `.env.example` for the template; real values go in `.env.local` (which is excluded from git).
 Production values for these same variables live in Vercel's project settings instead, added via
@@ -223,8 +254,10 @@ from ever reaching the app. This app's own Auth.js login is what actually protec
 financial data now.
 
 ## Not yet built
-- The Plaid webhook + push notification delivery described above (the original goal of this
-  feature — the manual sync button is a placeholder for it)
+- In-notification quick-action category buttons (tapping a notification opens the app to
+  categorize instead -- see "Push notifications" above)
 - Todos/scheduling and any other planned productivity-hub features beyond the financial tracking
 - Any way to reset a forgotten password (there's no "forgot password" email flow yet -- losing your
   password currently means losing access)
+- Existing bank connections made before the webhook feature don't automatically get a webhook
+  registered retroactively -- only connections made after `APP_URL` was configured have one

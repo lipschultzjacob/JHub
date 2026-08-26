@@ -120,3 +120,21 @@ export const transactions = pgTable("transactions", {
   plaidCategory: text("plaid_category"), // Plaid's own suggested category, kept just as a reference/default
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+// One row per device/browser that's agreed to receive push notifications.
+// The browser hands us these three values (endpoint + two keys) when you
+// grant notification permission -- endpoint is basically "the address to
+// send this device a push," and p256dh/auth are encryption keys so only
+// that specific browser can read what we send. One person could have
+// several rows here (phone, laptop, etc.), which is why this isn't just a
+// column on `users`.
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
