@@ -363,3 +363,20 @@ way to confirm a webhook is real.
 from Plaid on every webhook (Plaid asks integrators not to do that) -- fine for personal-scale
 traffic; would need a shared cache (e.g. in the database, or a dedicated cache service) if this ever
 ran across many server instances handling heavy webhook volume.
+
+---
+
+## 2026-08-26 — Explicitly confirm the webhook on every connection, not just at link-token creation
+
+**Decision:** `POST /api/plaid/exchange-token` calls Plaid's `itemWebhookUpdate` right after
+connecting a bank, re-setting the webhook URL even though it should already have been included when
+the link token was created.
+
+**Why:** Found this the hard way while testing the webhook end-to-end: a bank connection can end up
+with no webhook attached at all, silently, with no error at connect time -- it only shows up later
+as "notifications just never arrive." (Specifically: connections created through Plaid's sandbox
+testing shortcut, `/sandbox/public_token/create`, don't inherit the webhook from a link token at
+all, since they skip the real Link flow entirely -- but the concern generalizes beyond that one
+shortcut, since there's no visible confirmation either way at connect time.) Explicitly confirming
+it again after every connection is nearly free (a single extra API call) and closes that gap for
+good, rather than trusting an assumption that turned out to be wrong.

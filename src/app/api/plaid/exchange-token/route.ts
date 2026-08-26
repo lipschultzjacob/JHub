@@ -57,5 +57,20 @@ export async function POST(request: Request) {
     }))
   );
 
+  // Explicitly (re-)confirm the webhook URL on this connection, rather than
+  // only relying on it having been included when the link token was
+  // created. This is a real gap that was actually hit: connections made a
+  // different way (e.g. Plaid's sandbox testing shortcuts, or a stale link
+  // token) can end up with no webhook attached, silently, with no error at
+  // connect time -- it only shows up later as "notifications never arrive."
+  // Calling this again here is harmless if the webhook was already set
+  // correctly, so it's cheap insurance.
+  if (process.env.APP_URL) {
+    await plaidClient.itemWebhookUpdate({
+      access_token: accessToken,
+      webhook: `${process.env.APP_URL}/api/plaid/webhook`,
+    });
+  }
+
   return NextResponse.json({ success: true });
 }

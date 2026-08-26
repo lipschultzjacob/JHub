@@ -193,7 +193,11 @@ The actual "notify me the moment I spend money" feature. Three pieces:
 
 1. **Registering with Plaid.** When a link token is created (step 1 above), it includes a `webhook`
    URL (only when `APP_URL` is configured -- see Environment variables) pointing at
-   `POST /api/plaid/webhook`. Plaid remembers this per connection and calls it automatically.
+   `POST /api/plaid/webhook`. Right after exchanging the token (step 3 above), that webhook is also
+   explicitly (re-)confirmed via `itemWebhookUpdate` -- discovered the hard way during testing that
+   a connection can silently end up with no webhook attached depending on exactly how it was
+   created, with no error at connect time; it only shows up later as "notifications never arrive."
+   Calling it again here is harmless if it was already set correctly.
 2. **Subscribing this browser.** Clicking "Enable notifications" (`PushSubscribeButton`) asks the
    browser for notification permission, then uses the browser's own Web Push API to create a
    subscription (an address + two encryption keys unique to this browser). That gets saved via
@@ -259,5 +263,5 @@ financial data now.
 - Todos/scheduling and any other planned productivity-hub features beyond the financial tracking
 - Any way to reset a forgotten password (there's no "forgot password" email flow yet -- losing your
   password currently means losing access)
-- Existing bank connections made before the webhook feature don't automatically get a webhook
-  registered retroactively -- only connections made after `APP_URL` was configured have one
+- Bank connections made before this webhook-confirmation step existed don't get fixed
+  retroactively -- only reconnecting (or a new connection) re-confirms the webhook
