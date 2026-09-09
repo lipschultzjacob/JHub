@@ -3,8 +3,8 @@
 Personal productivity hub — starting with automatic bank transaction tracking (Plaid), expanding
 into todos/scheduling and other productivity features over time.
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** — living doc of how the app is built right now
-- **[DECISIONS.md](DECISIONS.md)** — append-only log of why each architecture choice was made
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — living doc of how the app is built right now
+- **[docs/DECISIONS.md](docs/DECISIONS.md)** — append-only log of why each architecture choice was made
 
 ## Prerequisites
 

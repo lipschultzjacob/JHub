@@ -6,14 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Two other docs in this repo are more authoritative than this file for anything beyond commands and
 orientation, and are meant to be kept current as the app changes:
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** — living description of the current stack, every file's
-  purpose, and how data flows through the app (Plaid sync, push notifications, auth, deployment).
-- **[DECISIONS.md](DECISIONS.md)** — append-only log of *why* each significant technical choice was
-  made, including several non-obvious gotchas hit while building this.
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — living description of the current stack, every
+  file's purpose, and how data flows through the app (Plaid sync, push notifications, auth, deployment).
+- **[docs/DECISIONS.md](docs/DECISIONS.md)** — append-only log of *why* each significant technical
+  choice was made, including several non-obvious gotchas hit while building this.
 
-Read both before making an architectural change; update ARCHITECTURE.md (and append to DECISIONS.md
-for anything with real tradeoffs) in the same commit as any change that adds a new moving part, new
-data flow, or new directory convention.
+Read both before making an architectural change; update docs/ARCHITECTURE.md (and append to
+docs/DECISIONS.md for anything with real tradeoffs) in the same commit as any change that adds a new
+moving part, new data flow, or new directory convention.
 
 ## Commands
 
@@ -48,7 +48,7 @@ Local dev requires Docker Desktop running (`docker compose up -d`) and `.env.loc
 ## Architecture
 
 Next.js App Router, TypeScript end-to-end, one unified app (no separate backend service). Full
-detail in ARCHITECTURE.md; the load-bearing points for making changes correctly:
+detail in docs/ARCHITECTURE.md; the load-bearing points for making changes correctly:
 
 - **Database**: Drizzle ORM + Postgres. `src/db/schema.ts` is the single source of truth for table
   shape; migrations live in `drizzle/` and are generated, never hand-edited. Local dev uses a
@@ -79,7 +79,7 @@ detail in ARCHITECTURE.md; the load-bearing points for making changes correctly:
 - **Deployment**: Vercel (app) + Neon (production Postgres), auto-deploys on push to `main`. Vercel
   secrets are stored as "Non-sensitive" rather than "Sensitive" — the latter type was empirically
   found not to be readable by the running function at all in this project's setup, not just during
-  the build (see DECISIONS.md for how this was diagnosed).
+  the build (see docs/DECISIONS.md for how this was diagnosed).
 
 ## Security — this repo is public
 
@@ -92,8 +92,9 @@ just a one-time check:
   `DATABASE_URL`, `PLAID_CLIENT_ID`/`PLAID_SECRET`, `AUTH_SECRET`, `VAPID_PRIVATE_KEY`, or any future
   secret. Only `.env.example` (placeholders/empty values only) belongs in git. Don't add a new secret
   to `.gitignore`'s allowlist without a specific reason.
-- **Never paste a real secret value into a committed file** — not in code, not in ARCHITECTURE.md/
-  DECISIONS.md/README.md/CLAUDE.md, not in a code comment "for reference," not in a commit message.
+- **Never paste a real secret value into a committed file** — not in code, not in
+  docs/ARCHITECTURE.md/docs/DECISIONS.md/README.md/CLAUDE.md, not in a code comment "for reference,"
+  not in a commit message.
   Reference variable *names*, never values.
 - **Before every commit**, actually look at `git status` and `git diff` for what's about to be
   staged — don't `git add -A` on autopilot. If a broad add pulls in something unexpected (a stray
