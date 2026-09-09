@@ -107,6 +107,18 @@ just a one-time check:
   `git log --all -S"<the specific value>"` (not a full-text `grep`) finds every commit that ever
   introduced or removed that exact string, which is what actually answers the question.
 
+## Agent skills
+
+### Issue tracker
+
+Issues live as GitHub issues in `lipschultzjacob/JHub`, managed via the `gh` CLI. See
+`docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context layout (one `CONTEXT.md` + `docs/adr/` at the repo root, created lazily as terms/
+decisions get resolved). See `docs/agents/domain.md`.
+
 ## Conventions specific to this repo
 
 - Comments and documentation (including chat explanations of changes) should spell out unfamiliar
