@@ -425,3 +425,33 @@ store would, at personal-project scale, so using it avoided adding a new piece o
 **Tradeoff accepted:** Every rate-limit check is a database round-trip, and a proper distributed
 store (Redis) would handle much higher request volume with less contention. Neither matters at this
 app's actual scale (one user, occasional real traffic); revisit if that ever changes.
+
+---
+
+## 2026-09-09 — Security audit before connecting a real bank: what was checked, and CSRF left as-is
+
+**Decision:** Before moving off Plaid's sandbox, did a full pass over auth, data-scoping, and input
+handling rather than only fixing the two gaps that happened to be already known (see the two entries
+above). No explicit CSRF (cross-site request forgery) protection was added to the custom API routes
+(`transactions/[id]`, `push/subscribe`, `plaid/sync`, `plaid/exchange-token`) beyond what Auth.js's
+session cookie already provides.
+
+**Why:** Auth.js's session cookie is already set with `sameSite: "lax"` (confirmed directly in
+`node_modules/@auth/core`, not assumed) — this already stops the cookie from being sent on
+cross-site POST/PATCH/DELETE requests, which is the actual mechanism a CSRF attack needs. Adding a
+separate CSRF token system on top would be defense-in-depth for a threat that's already
+substantially closed, at the cost of real complexity (a token to generate, thread through every
+mutating request, and validate) for a single-user personal app. Skipped for now; revisit if this
+ever becomes multi-user or handles anything more consequential per-request than category
+assignment/notification subscriptions.
+
+**Also checked, and already fine, no changes made:**
+- **Ownership checks** — every route that reads or writes transactions, categories, or push
+  subscriptions verifies the data belongs to the logged-in user (several go through a multi-table
+  join, e.g. transaction → account → bank connection → user, since those tables don't repeat
+  `user_id` directly — see "Multi-tenancy" in ARCHITECTURE.md).
+- **Session cookies** — `httpOnly`, `sameSite: lax`, and `secure` (in production) are Auth.js's
+  actual defaults here, not something that needed fixing.
+- **No SQL injection or XSS surface found** — all queries go through Drizzle's parameterized query
+  builder (no raw/interpolated SQL anywhere in the app), and no `dangerouslySetInnerHTML` or
+  equivalent is used anywhere.
