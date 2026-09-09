@@ -3,11 +3,23 @@ import bcrypt from "bcryptjs";
 import { db } from "@/db";
 import { users, categories } from "@/db/schema";
 import { DEFAULT_CATEGORIES } from "@/lib/default-categories";
+import { isRateLimited } from "@/lib/rate-limit";
 
 // Creates a new account. Auth.js itself only handles logging in, not
 // registration -- this is our own plain endpoint the signup page submits
 // to, separate from Auth.js's built-in routes.
 export async function POST(request: Request) {
+  // Blocks a script from flooding the app with fake accounts. Keyed by IP
+  // rather than email -- unlike login, the email here is whatever the
+  // attacker made up, so it isn't a useful thing to key on.
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (await isRateLimited(`signup:${ip}`)) {
+    return NextResponse.json(
+      { error: "Too many signup attempts. Try again later." },
+      { status: 429 }
+    );
+  }
+
   const { email, password } = await request.json();
 
   if (typeof email !== "string" || typeof password !== "string") {

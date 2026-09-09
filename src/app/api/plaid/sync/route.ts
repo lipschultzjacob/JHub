@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { plaidItems } from "@/db/schema";
 import { auth } from "@/auth";
 import { syncPlaidItem } from "@/lib/plaid-sync";
+import { decrypt } from "@/lib/crypto";
 
 // Fetches whatever transactions have changed since the last sync, for every
 // connected bank. This is a manual stand-in for the Plaid webhook (see
@@ -27,7 +28,9 @@ export async function POST() {
   let removed = 0;
 
   for (const item of items) {
-    const result = await syncPlaidItem(item);
+    // accessToken is stored encrypted (see src/lib/crypto.ts) -- decrypt it
+    // back to the real token Plaid expects before this item is used.
+    const result = await syncPlaidItem({ ...item, accessToken: decrypt(item.accessToken) });
     added += result.added;
     modified += result.modified;
     removed += result.removed;

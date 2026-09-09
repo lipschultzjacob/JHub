@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
+import { isRateLimited, resetAttempts } from "@/lib/rate-limit";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   // "JWT" sessions: your logged-in state is stored in an encrypted cookie in
@@ -38,6 +39,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
+        // Blocks repeated password-guessing against one email address --
+        // counted by email rather than IP, since the actual thing being
+        // protected is this specific account, regardless of where the
+        // attempts come from.
+        const rateLimitKey = `login:${email.toLowerCase()}`;
+        if (await isRateLimited(rateLimitKey)) {
+          return null;
+        }
+
         const [user] = await db
           .select()
           .from(users)
@@ -52,6 +62,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         );
         if (!passwordMatches) return null;
 
+        // A real login succeeded -- clear the attempt count so a few
+        // earlier typos don't count against the next window.
+        await resetAttempts(rateLimitKey);
         return { id: String(user.id), email: user.email };
       },
     }),

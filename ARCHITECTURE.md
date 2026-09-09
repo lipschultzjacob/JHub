@@ -69,7 +69,9 @@ JHub/
 │   │   ├── plaid-sync.ts          the actual "fetch new transactions and save them" logic, shared by the manual sync button and the webhook
 │   │   ├── plaid-webhook-verify.ts confirms an incoming webhook request genuinely came from Plaid
 │   │   ├── web-push.ts            sends a push notification to one saved subscription
-│   │   └── default-categories.ts  the starter category list given to every new account
+│   │   ├── default-categories.ts  the starter category list given to every new account
+│   │   ├── crypto.ts              encrypts/decrypts the Plaid access_token before it's stored (see Database below)
+│   │   └── rate-limit.ts          blocks repeated login/signup attempts past a threshold (see Login below)
 │   ├── types/
 │   │   └── next-auth.d.ts         small type addition so TypeScript knows about the user ID we attach to sessions
 │   ├── auth.ts                    Auth.js configuration: how login works, what a session contains
@@ -133,6 +135,14 @@ Sessions use the "JWT" strategy: your logged-in state lives in an encrypted brow
 than a database row, which is simpler to set up but means there's no way to remotely force one
 specific session to log out (changing your password is the only way to invalidate a session early).
 
+Both logging in and signing up are rate-limited (`src/lib/rate-limit.ts`) to block repeated
+automated attempts: 5 attempts per 15 minutes, tracked in the `login_attempts` table (see Database
+below) since there's no Redis/in-memory store in this stack that would survive between serverless
+requests. Login is limited per email address (protects one account regardless of where the attempts
+come from); signup is limited per IP address (there's no real account to key on yet -- this stops a
+script from mass-creating fake accounts). A successful login clears that email's count so a couple
+of earlier typos don't count against you later.
+
 ### Database
 During development, the app talks to a Postgres database running locally in Docker
 (`docker-compose.yml`), started with `docker compose up -d`. In production it'll talk to a
@@ -150,13 +160,15 @@ Current tables:
   accounts get a starter set automatically at signup; `npm run db:seed -- you@example.com` can
   re-add them to an existing account)
 - `plaid_items` — one row per bank a user has connected; holds the credential Plaid gave us for
-  that connection and a bookmark ("cursor," see below) of how far we've synced
+  that connection (encrypted -- see the Plaid section below) and a bookmark ("cursor," see below) of
+  how far we've synced
 - `plaid_accounts` — the individual accounts (checking, savings, etc.) that belong to a connected
   bank
 - `transactions` — one row per transaction, linked to which account it came from and (optionally)
   which category you assigned it
 - `push_subscriptions` — one row per browser/device that's agreed to receive push notifications for
   a user (someone could have several: phone, laptop, ...)
+- `login_attempts` — recent login/signup attempts, used to block a burst of them (see Login above)
 
 `categories`, `plaid_items`, and `push_subscriptions` have a `user_id` column directly. `plaid_accounts` and
 `transactions` don't repeat it -- their owner is found by following the chain down to `plaid_items`
@@ -172,8 +184,13 @@ one user's data is never visible or editable by another.
 3. On success, Plaid hands the browser a `public_token`. The frontend sends that to
    `POST /api/plaid/exchange-token`, which trades it, on the server, for the real long-lived
    connection credential (the `access_token`) — this step has to happen on the server because that
-   credential is a secret that should never reach the browser. It's saved to `plaid_items`, and the
-   bank's individual accounts are fetched and saved to `plaid_accounts`.
+   credential is a secret that should never reach the browser. Before it's saved to `plaid_items`,
+   it's encrypted (`src/lib/crypto.ts`, AES-256-GCM, keyed by the `ENCRYPTION_KEY` environment
+   variable) -- this app only ever requests Plaid's read-only `Transactions` product, so this
+   credential can't move money either way, but it can read your real transaction history, so a
+   database leak alone shouldn't be enough to expose that too. It's decrypted again right before
+   each use (fetching accounts here, syncing transactions in step 4). The bank's individual accounts
+   are fetched and saved to `plaid_accounts`.
 4. From here, new transactions get fetched one of two ways. Automatically: Plaid calls
    `POST /api/plaid/webhook` itself the instant something changes (see "Push notifications" below).
    Manually: clicking "Sync transactions" calls `POST /api/plaid/sync` and does the same fetch on
@@ -213,6 +230,12 @@ The actual "notify me the moment I spend money" feature. Three pieces:
    full in-notification category buttons were considered but skipped for now (see DECISIONS.md):
    browsers only allow ~2 actions directly on a notification, and iOS doesn't support them at all.
 
+## Security headers
+`next.config.ts` adds a few response headers to every page: `X-Frame-Options: DENY` (stops this app
+from ever being embedded in another site's hidden iframe -- a "clickjacking" trick to get you to
+click something you didn't mean to), plus `Referrer-Policy` and `X-Content-Type-Options` as standard,
+low-cost hardening. None of these needed a real decision -- they're the boring, obvious defaults.
+
 ## Environment variables
 
 "Environment variables" are settings/secrets kept outside the code (in a `.env.local` file that's
@@ -224,6 +247,7 @@ never committed to git), so things like passwords aren't stored in the codebase 
 | `PLAID_CLIENT_ID` / `PLAID_SECRET` | Credentials that prove to Plaid this app is allowed to use their API |
 | `PLAID_ENV` | Which Plaid environment to talk to: `sandbox` (fake test data), `development`, or `production` (real banks) |
 | `AUTH_SECRET` | Used to encrypt login session cookies |
+| `ENCRYPTION_KEY` | Used to encrypt the Plaid `access_token` before it's stored in the database (`src/lib/crypto.ts`) -- a separate key from `AUTH_SECRET`, never reused |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Web Push credentials -- prove notifications from this app are genuinely from this app. The public key is safe for the browser to see (hence `NEXT_PUBLIC_`); the private key is not |
 | `APP_URL` | This app's real public web address, e.g. `https://j-hub-lippy-industries.vercel.app`. Used to tell Plaid where to send webhooks. Unset locally, since local dev has no public address for Plaid to reach |
 

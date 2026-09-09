@@ -380,3 +380,48 @@ all, since they skip the real Link flow entirely -- but the concern generalizes 
 shortcut, since there's no visible confirmation either way at connect time.) Explicitly confirming
 it again after every connection is nearly free (a single extra API call) and closes that gap for
 good, rather than trusting an assumption that turned out to be wrong.
+
+---
+
+## 2026-09-09 — Encrypt the Plaid access_token at rest instead of storing it as plain text
+
+**Decision:** The Plaid `access_token` in `plaid_items.access_token` is encrypted (AES-256-GCM)
+before being saved, and decrypted only at the moment it's used. This needed one new secret,
+`ENCRYPTION_KEY`, deliberately separate from `AUTH_SECRET` (rather than reusing it) so the two
+concerns -- session cookies vs. stored bank credentials -- can be rotated independently.
+
+**Why:** Preparing to connect a real bank account (moving off Plaid's sandbox) surfaced this as the
+one genuinely risky gap in an otherwise solid multi-tenancy/auth setup: if the database were ever
+exposed (a leaked connection string, a compromised Neon account), a plain-text `access_token` would
+hand over standing read access to real transaction data with nothing else needed. Worth being
+explicit about the actual blast radius here: this app only ever requests Plaid's read-only
+`Transactions` product (see `link-token/route.ts`), never `Transfer` or `Payment Initiation` -- so
+even a fully leaked, unencrypted token could never have been used to move money, only to read
+transaction history. Encryption closes the (real, if narrower-than-it-first-sounded) confidentiality
+gap that remained.
+
+**Alternatives considered:** A database-level encryption feature (e.g. Postgres's `pgcrypto`, or
+relying on Neon's at-rest disk encryption alone) -- rejected because at-rest disk encryption only
+protects against someone stealing the physical storage, not against a leaked connection string or
+compromised DB credentials, which is the actual threat here. Application-level encryption (what was
+built) protects against both, at the cost of one more secret to manage.
+
+---
+
+## 2026-09-09 — Rate-limit login and signup using the existing Postgres database, not a new service
+
+**Decision:** Both `POST /api/auth/signup` and the login `authorize()` callback are rate-limited (5
+attempts per 15 minutes) via a new `login_attempts` table and `src/lib/rate-limit.ts`, rather than
+adding Redis/Upstash or another dedicated rate-limiting service.
+
+**Why:** Same motivation as the encryption decision above -- closing real gaps before connecting a
+real bank account. There was no rate limiting at all on either endpoint, leaving the login open to
+password-guessing and signup open to scripted account spam. Vercel's serverless functions don't
+share in-memory state between invocations, so an in-memory counter wouldn't actually work in
+production; but this app already has a shared Postgres database doing the same job any dedicated
+store would, at personal-project scale, so using it avoided adding a new piece of infrastructure
+(and a new external account/dependency) for a problem the existing database can solve well enough.
+
+**Tradeoff accepted:** Every rate-limit check is a database round-trip, and a proper distributed
+store (Redis) would handle much higher request volume with less contention. Neither matters at this
+app's actual scale (one user, occasional real traffic); revisit if that ever changes.

@@ -3,6 +3,7 @@ import { plaidClient } from "@/lib/plaid";
 import { db } from "@/db";
 import { plaidItems, plaidAccounts } from "@/db/schema";
 import { auth } from "@/auth";
+import { encrypt } from "@/lib/crypto";
 
 // Finishes connecting a bank account. The frontend calls this
 // (POST /api/plaid/exchange-token) right after Plaid's popup succeeds,
@@ -26,13 +27,16 @@ export async function POST(request: Request) {
   const { access_token: accessToken, item_id: plaidItemId } =
     exchangeResponse.data;
 
-  // Save this bank connection to the database.
+  // Save this bank connection to the database. accessToken is encrypted
+  // before it's stored (see src/lib/crypto.ts) -- everywhere below that
+  // still needs the real token (accountsGet, itemWebhookUpdate) keeps using
+  // the plain `accessToken` variable, which was never touched.
   const [item] = await db
     .insert(plaidItems)
     .values({
       userId: Number(session.user.id),
       plaidItemId,
-      accessToken,
+      accessToken: encrypt(accessToken),
       institutionId,
       institutionName,
     })

@@ -5,6 +5,7 @@ import { plaidItems, pushSubscriptions } from "@/db/schema";
 import { verifyPlaidWebhook } from "@/lib/plaid-webhook-verify";
 import { syncPlaidItem, type NewTransaction } from "@/lib/plaid-sync";
 import { sendPushNotification } from "@/lib/web-push";
+import { decrypt } from "@/lib/crypto";
 
 // This is the endpoint Plaid itself calls automatically the moment there's
 // new transaction activity on a connected bank -- the real "notify me
@@ -44,7 +45,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ignored: true });
   }
 
-  const { newTransactions } = await syncPlaidItem(item);
+  // accessToken is stored encrypted (see src/lib/crypto.ts) -- decrypt it
+  // back to the real token Plaid expects before this item is used.
+  const { newTransactions } = await syncPlaidItem({ ...item, accessToken: decrypt(item.accessToken) });
   if (newTransactions.length > 0) {
     await notifyUser(item.userId, newTransactions);
   }

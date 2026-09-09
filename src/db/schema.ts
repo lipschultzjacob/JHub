@@ -28,6 +28,21 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Tracks recent login/signup attempts so a burst of them can be blocked
+// (brute-forcing a password, or scripting a flood of fake signups). One row
+// per "key" being watched (e.g. one email address, or one IP address) --
+// see src/lib/rate-limit.ts for how this is actually used.
+export const loginAttempts = pgTable("login_attempts", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  count: integer("count").notNull().default(1),
+  // The start of the current counting window -- once WINDOW_MS (in
+  // rate-limit.ts) has passed since this timestamp, the count resets to 1
+  // instead of continuing to climb, so an old burst doesn't lock someone out
+  // forever.
+  windowStart: timestamp("window_start").notNull().defaultNow(),
+});
+
 // Budgeting categories you sort transactions into (e.g. "Groceries", "Rent").
 // Each belongs to one user, so different people can have entirely different
 // sets of categories. The `unique` line below means a name only has to be
