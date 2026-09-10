@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { buttonPrimary, inputBase, fieldLabel, bodyText65 } from "@/components/recipes";
 
 // The login form. Submitting it calls Auth.js's signIn function directly
 // from the browser -- that's what actually checks the email/password
@@ -41,36 +42,49 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto flex max-w-sm flex-1 flex-col justify-center px-6">
-      <h1 className="text-2xl font-semibold">Log in</h1>
+      <h1 className="font-heading text-[32px]">Log in</h1>
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-        <input
-          type="email"
-          required
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="rounded-md border border-white/20 bg-transparent px-3 py-2 text-sm"
-        />
-        <input
-          type="password"
-          required
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="rounded-md border border-white/20 bg-transparent px-3 py-2 text-sm"
-        />
-        {error && <p className="text-sm text-red-400">{error}</p>}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded-md bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
-        >
+        <div>
+          <label htmlFor="email" className={fieldLabel}>
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={`w-full ${inputBase}`}
+          />
+        </div>
+        <div>
+          <label htmlFor="password" className={fieldLabel}>
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={`w-full ${inputBase}`}
+          />
+        </div>
+        {/* No semantic red for errors -- the design system's one accent
+            rule -- so this stands out by being full-strength ink against
+            the surrounding secondary (65%) text, not by color. */}
+        {error && (
+          <p role="alert" className="text-sm text-text">
+            {error}
+          </p>
+        )}
+        <button type="submit" disabled={isSubmitting} className={`w-full ${buttonPrimary}`}>
           {isSubmitting ? "Logging in..." : "Log in"}
         </button>
       </form>
-      <p className="mt-4 text-sm text-zinc-400">
+      <p className={`mt-4 text-sm ${bodyText65}`}>
         No account?{" "}
-        <Link href="/signup" className="underline">
+        <Link href="/signup" className="text-accent hover:text-[var(--color-accent-300)]">
           Sign up
         </Link>
       </p>
