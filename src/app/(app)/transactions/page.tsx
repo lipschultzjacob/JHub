@@ -5,8 +5,8 @@ import { auth } from "@/auth";
 import { PlaidLinkButton } from "@/components/plaid-link-button";
 import { SyncButton } from "@/components/sync-button";
 import { CategorySelect } from "@/components/category-select";
-import { SignOutButton } from "@/components/sign-out-button";
 import { PushSubscribeButton } from "@/components/push-subscribe-button";
+import { card, bodyText65, metaText45 } from "@/components/recipes";
 
 // Without this, Next.js would try to be clever and bake this page's data in
 // once at build time (since nothing here obviously changes per visit),
@@ -24,8 +24,12 @@ export const dynamic = "force-dynamic";
 // sync button, category dropdowns) are separate "Client Components" that do
 // run in the browser, since only they need to react to clicks.
 //
-// The middleware (src/middleware.ts) already guarantees no one reaches this
-// page without being logged in, so session.user is safe to assume exists here.
+// The proxy (src/proxy.ts) already guarantees no one reaches this page
+// without being logged in, so session.user is safe to assume exists here.
+//
+// This still shows one flat transaction list -- the spec's "needs a
+// category" split section and filter row are a separate pass (issue #4),
+// since they're new layout/behavior rather than a restyle of what's here.
 export default async function TransactionsPage() {
   const session = await auth();
   const userId = Number(session!.user.id);
@@ -60,31 +64,30 @@ export default async function TransactionsPage() {
     .orderBy(desc(transactions.date));
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-12">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Transactions</h1>
-        <div className="flex items-center gap-3 text-sm text-zinc-400">
-          <span>{session!.user.email}</span>
-          <SignOutButton />
+    <>
+      <h1 className="font-heading text-[40px]">Transactions</h1>
+
+      <div className={card}>
+        <div className="flex flex-wrap items-center gap-3">
+          <PlaidLinkButton />
+          {items.length > 0 && <SyncButton />}
+          <PushSubscribeButton />
         </div>
+
+        {items.length === 0 && (
+          <p className={`text-sm ${bodyText65}`}>
+            No bank connected yet. Connect one to start pulling transactions
+            (sandbox credentials only for now -- use Plaid&apos;s test
+            institution with username <code>user_good</code> / password{" "}
+            <code>pass_good</code>).
+          </p>
+        )}
+        {items.length > 0 && rows.length === 0 && (
+          <p className={`text-sm ${bodyText65}`}>No transactions yet -- try syncing.</p>
+        )}
       </div>
 
-      <div className="mt-6 flex items-center gap-4">
-        <PlaidLinkButton />
-        {items.length > 0 && <SyncButton />}
-        <PushSubscribeButton />
-      </div>
-
-      {items.length === 0 && (
-        <p className="mt-4 text-sm text-zinc-400">
-          No bank connected yet. Connect one to start pulling transactions
-          (sandbox credentials only for now -- use Plaid&apos;s test
-          institution with username <code>user_good</code> / password{" "}
-          <code>pass_good</code>).
-        </p>
-      )}
-
-      <div className="mt-8 divide-y divide-white/10">
+      <div className="flex flex-col">
         {rows.map((row) => (
           <div
             key={row.id}
@@ -92,22 +95,22 @@ export default async function TransactionsPage() {
             // target:target-current highlights whichever row matches the
             // page's #transaction-<id> URL fragment -- how the push
             // notification points you straight at the transaction it's about.
-            className="flex scroll-mt-6 items-center justify-between gap-4 py-3 target:bg-white/5"
+            className="flex flex-wrap scroll-mt-6 items-center justify-between gap-x-4 gap-y-2 border-b border-[color-mix(in_srgb,var(--color-text)_8%,transparent)] px-2 py-[var(--row-pad)] target:bg-[color-mix(in_srgb,var(--color-text)_4%,transparent)]"
           >
-            <div className="min-w-0">
-              <div className="truncate font-medium">
+            <div className="min-w-[160px] flex-1">
+              <div className="truncate text-[15px]">
                 {row.merchantName ?? row.name}
                 {row.pending && (
-                  <span className="ml-2 text-xs text-zinc-500">(pending)</span>
+                  <span className={`ml-2 text-[11px] ${metaText45}`}>(pending)</span>
                 )}
               </div>
-              <div className="text-xs text-zinc-500">
-                {row.date} - {row.accountName}
+              <div className={`text-[11px] ${metaText45}`}>
+                {row.date} · {row.accountName}
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-4">
               {/* Plaid convention: positive = money out, negative = money in */}
-              <span className="tabular-nums">${row.amount}</span>
+              <span className="min-w-[92px] text-right text-[15px] tabular-nums">${row.amount}</span>
               <CategorySelect
                 transactionId={row.id}
                 categoryId={row.categoryId}
@@ -117,6 +120,6 @@ export default async function TransactionsPage() {
           </div>
         ))}
       </div>
-    </div>
+    </>
   );
 }

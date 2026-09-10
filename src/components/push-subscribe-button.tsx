@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { buttonSecondary, bodyText65 } from "@/components/recipes";
 
 // Web Push's browser API wants the VAPID public key as raw bytes, but env
 // vars can only hold text -- it's stored as "base64url" (a URL-safe variant
@@ -71,22 +72,18 @@ export function PushSubscribeButton() {
 
   if (status === "unsupported") return null; // e.g. Safari on an older iOS -- nothing sensible to show
   if (status === "on") {
-    return <span className="text-sm text-zinc-400">Notifications on</span>;
+    return <span className={`text-sm ${bodyText65}`}>Notifications on</span>;
   }
   if (status === "denied") {
     return (
-      <span className="text-sm text-zinc-400">
+      <span className={`text-sm ${bodyText65}`}>
         Notifications blocked -- enable them in your browser&apos;s site settings
       </span>
     );
   }
 
   return (
-    <button
-      onClick={handleSubscribe}
-      disabled={status === "working"}
-      className="rounded-md border border-white/20 px-4 py-2 text-sm font-medium disabled:opacity-50"
-    >
+    <button onClick={handleSubscribe} disabled={status === "working"} className={buttonSecondary}>
       Enable notifications
     </button>
   );

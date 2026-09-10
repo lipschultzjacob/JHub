@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { inputBase } from "@/components/recipes";
 
 type Category = { id: number; name: string };
 
@@ -38,7 +39,7 @@ export function CategorySelect({
       value={categoryId ?? ""}
       onChange={(e) => handleChange(e.target.value)}
       disabled={isPending}
-      className="rounded-md border border-white/20 bg-black px-2 py-1 text-sm disabled:opacity-50"
+      className={`${inputBase} disabled:opacity-45`}
     >
       <option value="">Uncategorized</option>
       {categories.map((c) => (

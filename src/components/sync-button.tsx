@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { buttonSecondary, bodyText65 } from "@/components/recipes";
 
 // The "Sync transactions" button. This is a stand-in for the automatic
 // Plaid webhook we haven't built yet (that needs our server to have a
@@ -24,15 +25,11 @@ export function SyncButton() {
   };
 
   return (
-    <div className="flex items-center gap-3">
-      <button
-        onClick={handleSync}
-        disabled={isPending}
-        className="rounded-md border border-white/20 px-4 py-2 text-sm font-medium disabled:opacity-50"
-      >
+    <div className="flex flex-wrap items-center gap-3">
+      <button onClick={handleSync} disabled={isPending} className={buttonSecondary}>
         {isPending ? "Syncing..." : "Sync transactions"}
       </button>
-      {result && <span className="text-sm text-zinc-400">{result}</span>}
+      {result && <span className={`text-sm ${bodyText65}`}>{result}</span>}
     </div>
   );
 }

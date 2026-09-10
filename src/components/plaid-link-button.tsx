@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePlaidLink, type PlaidLinkOnSuccessMetadata } from "react-plaid-link";
 import { useRouter } from "next/navigation";
+import { buttonPrimary } from "@/components/recipes";
 
 // The button that starts connecting a bank account. Plaid Link is Plaid's
 // own ready-made popup for picking your bank and logging in -- Plaid
@@ -47,11 +48,7 @@ export function PlaidLinkButton() {
   });
 
   return (
-    <button
-      onClick={() => open()}
-      disabled={!ready || !linkToken}
-      className="rounded-md bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
-    >
+    <button onClick={() => open()} disabled={!ready || !linkToken} className={buttonPrimary}>
       Connect a bank account
     </button>
   );
