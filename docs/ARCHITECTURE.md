@@ -17,7 +17,7 @@ explained the first time they show up.
 |----------------|----------------------------------|
 | Language       | TypeScript (JavaScript with type-checking added — catches whole categories of bugs before the code even runs), used for both the browser-facing code and the server code |
 | Framework      | Next.js — a toolkit that handles both the pages you see and the backend logic in one project, so there's no separate "frontend app" and "backend app" to keep in sync |
-| Styling        | Tailwind CSS — write styling directly as class names on elements instead of separate `.css` files |
+| Styling        | Tailwind CSS — write styling directly as class names on elements instead of separate `.css` files. UI must follow the design system in `docs/design-system.md`/`docs/design/` (tokens live in `src/app/globals.css`) |
 | Database       | PostgreSQL (Postgres for short) — where all persistent data (transactions, categories, etc.) is stored |
 | ORM            | Drizzle — a library that lets us describe and query the database using TypeScript instead of writing raw SQL by hand ("ORM" = Object-Relational Mapper, the general name for this kind of tool) |
 | Auth           | Auth.js (NextAuth) — a login/session library, using email+password and encrypted-cookie ("JWT") sessions |
@@ -34,13 +34,15 @@ See [DECISIONS.md](DECISIONS.md) for the reasoning behind each of these.
 JHub/
 ├── src/
 │   ├── app/                     Next.js's routing system: each folder here becomes a URL
-│   │   ├── layout.tsx            the shared page shell every page renders inside (fonts, page title, registers the service worker below)
-│   │   ├── page.tsx               the home page, served at "/"
+│   │   ├── layout.tsx            the root page shell every page renders inside (fonts, page title, registers the service worker below)
 │   │   ├── manifest.ts            describes the app for "install as an app" purposes, auto-served at /manifest.webmanifest
-│   │   ├── login/page.tsx          the login form
-│   │   ├── signup/page.tsx         the create-account form
-│   │   ├── transactions/
-│   │   │   └── page.tsx          the transactions page: connect a bank, view transactions, assign categories
+│   │   ├── (app)/                a "route group" -- the "(app)" folder name is invisible in the URL, it exists only so these pages can share one extra layout.tsx (the top Nav bar) without login/signup getting it too
+│   │   │   ├── layout.tsx          adds the shared Nav bar + page-width content wrapper around every page below
+│   │   │   ├── page.tsx             the home page, served at "/"
+│   │   │   └── transactions/
+│   │   │       └── page.tsx      the transactions page: connect a bank, view transactions, assign categories
+│   │   ├── login/page.tsx          the login form (outside the "(app)" group -- no Nav bar, per the design system)
+│   │   ├── signup/page.tsx         the create-account form (same)
 │   │   └── api/                  backend endpoints the frontend calls (no separate backend project needed)
 │   │       ├── auth/
 │   │       │   ├── [...nextauth]/ Auth.js's own required routes (login, logout, session check, etc.)
@@ -56,6 +58,9 @@ JHub/
 │   ├── components/               Interactive pieces of the UI (buttons, dropdowns) that run in the browser
 │   │   ├── service-worker-registration.tsx
 │   │   ├── auth-session-provider.tsx  makes the current login session available throughout the app
+│   │   ├── nav.tsx                the top nav bar shown on every signed-in page (a Server Component -- looks up the signed-in email directly rather than reacting to anything)
+│   │   ├── nav-links.tsx          the nav's page links, split out as a Client Component since only the browser knows the current URL (to mark the active link)
+│   │   ├── recipes.ts             shared Tailwind class-name strings (buttons, inputs, cards) from the design system, so components don't each repeat -- or drift out of sync with -- the same long class string. Not a component; plain exported strings
 │   │   ├── sign-out-button.tsx
 │   │   ├── plaid-link-button.tsx
 │   │   ├── sync-button.tsx
@@ -97,9 +102,11 @@ before it ever reaches your device, and it's allowed to talk to the database dir
 
 A component only runs in the *browser* instead when the file starts with `"use client"` at the top
 — that's called a "Client Component," and it's needed whenever something has to react to clicks,
-hold on-screen state, or use browser-only features. Everything in `src/components/` is a Client
-Component, because each one needs that: registering the service worker, opening Plaid's popup, or
-saving a dropdown change.
+hold on-screen state, or use browser-only features. Most of `src/components/` is a Client Component
+for exactly that reason: registering the service worker, opening Plaid's popup, saving a dropdown
+change. The two exceptions are `nav.tsx` (a Server Component -- it looks up the signed-in email
+directly instead of reacting to anything) and `recipes.ts` (not a component at all, just shared
+Tailwind class-name strings importable from either kind).
 
 ### The "installable app" layer (PWA)
 "PWA" stands for Progressive Web App — a website that can be installed like a real app (icon on your
