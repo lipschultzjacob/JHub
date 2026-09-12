@@ -176,8 +176,11 @@ Current tables:
 - `push_subscriptions` — one row per browser/device that's agreed to receive push notifications for
   a user (someone could have several: phone, laptop, ...)
 - `login_attempts` — recent login/signup attempts, used to block a burst of them (see Login above)
+- `todos` — to-do items for the Overview screen's "Today" card (`POST /api/todos` to create,
+  `PATCH /api/todos/[id]` to toggle `done`); `due_date` exists on the table but is always null for
+  now since no UI sets it yet
 
-`categories`, `plaid_items`, and `push_subscriptions` have a `user_id` column directly. `plaid_accounts` and
+`categories`, `plaid_items`, `push_subscriptions`, and `todos` have a `user_id` column directly. `plaid_accounts` and
 `transactions` don't repeat it -- their owner is found by following the chain down to `plaid_items`
 instead (e.g. a transaction's owner is whoever owns the `plaid_items` row its account belongs to).
 Every query that lists or edits this data filters (or double-checks ownership) using that chain, so
@@ -291,7 +294,8 @@ financial data now.
 ## Not yet built
 - In-notification quick-action category buttons (tapping a notification opens the app to
   categorize instead -- see "Push notifications" above)
-- Todos/scheduling and any other planned productivity-hub features beyond the financial tracking
+- The Overview screen itself (the `todos` table and its API routes exist -- see "Current tables"
+  above -- but there's no UI yet: the home page is still the placeholder in `src/app/(app)/page.tsx`)
 - Any way to reset a forgotten password (there's no "forgot password" email flow yet -- losing your
   password currently means losing access)
 - Bank connections made before this webhook-confirmation step existed don't get fixed

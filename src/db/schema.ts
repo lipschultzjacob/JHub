@@ -136,6 +136,23 @@ export const transactions = pgTable("transactions", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// A single to-do item on the Overview screen's "Today" card. Belongs directly
+// to one user (like `categories`), so ownership is a plain equality check --
+// no need to join through another table the way `transactions` does.
+export const todos = pgTable("todos", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  // Decorative-only for now -- there's no UI anywhere to set this yet, so
+  // every todo is created with it left null. Kept on the table already so a
+  // future due-date UI doesn't need its own migration.
+  dueDate: date("due_date"),
+  done: boolean("done").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // One row per device/browser that's agreed to receive push notifications.
 // The browser hands us these three values (endpoint + two keys) when you
 // grant notification permission -- endpoint is basically "the address to
