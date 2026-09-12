@@ -38,7 +38,7 @@ JHub/
 │   │   ├── manifest.ts            describes the app for "install as an app" purposes, auto-served at /manifest.webmanifest
 │   │   ├── (app)/                a "route group" -- the "(app)" folder name is invisible in the URL, it exists only so these pages can share one extra layout.tsx (the top Nav bar) without login/signup getting it too
 │   │   │   ├── layout.tsx          adds the shared Nav bar + page-width content wrapper around every page below
-│   │   │   ├── page.tsx             the home page, served at "/"
+│   │   │   ├── page.tsx             the home page, served at "/" -- the Overview screen's "Today" to-do card (issue #10); the header greeting and the other two Overview cards aren't built yet (see "Not yet built" below)
 │   │   │   └── transactions/
 │   │   │       └── page.tsx      the transactions page: connect a bank, view transactions, assign categories
 │   │   ├── login/page.tsx          the login form (outside the "(app)" group -- no Nav bar, per the design system)
@@ -54,7 +54,8 @@ JHub/
 │   │       │   └── webhook/       Plaid calls this automatically the moment a new transaction happens
 │   │       ├── push/
 │   │       │   └── subscribe/     saves/removes a browser's push notification subscription
-│   │       └── transactions/[id]/ lets the frontend set which category a transaction belongs to
+│   │       ├── transactions/[id]/ lets the frontend set which category a transaction belongs to
+│   │       └── todos/            create a todo (POST) and toggle its `done` state (PATCH /[id])
 │   ├── components/               Interactive pieces of the UI (buttons, dropdowns) that run in the browser
 │   │   ├── service-worker-registration.tsx
 │   │   ├── auth-session-provider.tsx  makes the current login session available throughout the app
@@ -65,7 +66,8 @@ JHub/
 │   │   ├── plaid-link-button.tsx
 │   │   ├── sync-button.tsx
 │   │   ├── push-subscribe-button.tsx  turns on push notifications for this browser
-│   │   └── category-select.tsx
+│   │   ├── category-select.tsx
+│   │   └── today-card.tsx         the Overview screen's to-do list -- genuinely optimistic (updates its own state immediately, rolls back on failure) rather than this repo's usual disable-then-router.refresh() pattern; see the comment at the top of the file for why
 │   ├── db/
 │   │   ├── schema.ts              defines the shape of every database table in TypeScript — this file is the single source of truth for what the database looks like
 │   │   └── index.ts               sets up the connection to the database that the rest of the app uses
@@ -294,8 +296,9 @@ financial data now.
 ## Not yet built
 - In-notification quick-action category buttons (tapping a notification opens the app to
   categorize instead -- see "Push notifications" above)
-- The Overview screen itself (the `todos` table and its API routes exist -- see "Current tables"
-  above -- but there's no UI yet: the home page is still the placeholder in `src/app/(app)/page.tsx`)
+- The rest of the Overview screen: the header greeting/summary line, the "Sort these"
+  category-guess queue, and the "This month" spending summary card (the "Today" to-do card is
+  built -- see `src/app/(app)/page.tsx` and `src/components/today-card.tsx`)
 - Any way to reset a forgotten password (there's no "forgot password" email flow yet -- losing your
   password currently means losing access)
 - Bank connections made before this webhook-confirmation step existed don't get fixed
