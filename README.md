@@ -10,7 +10,8 @@ into todos/scheduling and other productivity features over time.
 
 - Node.js 22+
 - Docker Desktop (for local Postgres)
-- A [Plaid](https://dashboard.plaid.com) developer account with sandbox API keys
+- A [Plaid](https://dashboard.plaid.com) developer account (Trial plan, production environment — see
+  docs/DECISIONS.md, 2026-09-12)
 
 ## Setup
 
@@ -24,7 +25,8 @@ into todos/scheduling and other productivity features over time.
    cp .env.example .env.local
    ```
    `DATABASE_URL` already matches `docker-compose.yml`'s credentials — no changes needed there for
-   local dev. Fill in `PLAID_CLIENT_ID` and `PLAID_SECRET` from your Plaid dashboard (sandbox keys).
+   local dev. Fill in `PLAID_CLIENT_ID` and `PLAID_SECRET` from your Plaid dashboard, and set
+   `PLAID_ENV=production`.
 
 3. Start local Postgres:
    ```bash
@@ -58,6 +60,5 @@ into todos/scheduling and other productivity features over time.
 
 ## Testing the Plaid flow
 
-Sandbox institutions accept any bank name with the test login `user_good` / `pass_good`. Connect a
-bank on the `/transactions` page, then click "Sync transactions" to pull in Plaid's generated test
-transaction data.
+Connect a real bank on the `/transactions` page via Plaid Link, then click "Sync transactions" to
+pull in actual transaction data.

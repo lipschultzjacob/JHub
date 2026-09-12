@@ -455,3 +455,22 @@ assignment/notification subscriptions.
 - **No SQL injection or XSS surface found** — all queries go through Drizzle's parameterized query
   builder (no raw/interpolated SQL anywhere in the app), and no `dangerouslySetInnerHTML` or
   equivalent is used anywhere.
+
+---
+
+## 2026-09-12 — Switched from Plaid sandbox to a real bank connection (Trial plan)
+
+**Decision:** Following through on the plan from the 2026-09-09 audit above (issue #2): signed up
+for Plaid's Trial plan (free, real production data, up to 10 connected accounts — the right fit for
+a single personal account, versus the heavier paid Production application). `PLAID_ENV` is now
+`production` both locally (`.env.local`) and on Vercel, with the Trial plan's `PLAID_CLIENT_ID` /
+`PLAID_SECRET`. Removed the sandbox-specific test-credentials copy from the transactions page empty
+state, `docs/design/README.md`'s spec for that screen, and the setup instructions in `README.md`.
+
+**Why:** No code change was needed — `src/lib/plaid.ts` already reads `PLAID_ENV` at request time
+rather than hardcoding an environment, by design (see the lazy-client-initialization entries above).
+This was purely a config/credentials switch plus cleanup of now-stale sandbox-testing copy.
+
+**Note:** This app only ever requests Plaid's read-only `Transactions` product, never
+`Transfer`/`Payment Initiation`, so this only grants read access to real transaction data — no way
+to move money.

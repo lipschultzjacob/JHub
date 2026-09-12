@@ -208,8 +208,7 @@ Condensed tabular, "{n} transactions this month" at 11px 50%, then two ghost but
 ### 5. Connect a bank (empty state)
 Centered card, max-width 460px, padding `space-8 space-6`, text-centered. Inside: a 96px dashed-
 border plate with a 45° repeating-stripe fill and an 11px monospace label ("no accounts linked"),
-h3 "Connect a bank", a 14px 65% paragraph, a full-width primary "Connect with Plaid", and an 11px
-monospace 45% footnote with the sandbox credentials.
+h3 "Connect a bank", a 14px 65% paragraph, and a full-width primary "Connect with Plaid".
 
 ### 6. Login / Signup
 Two equal columns (`repeat(auto-fit, minmax(280px, 1fr))`), min-height 520px, no nav bar.

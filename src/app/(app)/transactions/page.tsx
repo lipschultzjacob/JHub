@@ -76,10 +76,7 @@ export default async function TransactionsPage() {
 
         {items.length === 0 && (
           <p className={`text-sm ${bodyText65}`}>
-            No bank connected yet. Connect one to start pulling transactions
-            (sandbox credentials only for now -- use Plaid&apos;s test
-            institution with username <code>user_good</code> / password{" "}
-            <code>pass_good</code>).
+            No bank connected yet. Connect one to start pulling transactions.
           </p>
         )}
         {items.length > 0 && rows.length === 0 && (
