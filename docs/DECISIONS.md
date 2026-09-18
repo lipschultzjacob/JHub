@@ -474,3 +474,37 @@ This was purely a config/credentials switch plus cleanup of now-stale sandbox-te
 **Note:** This app only ever requests Plaid's read-only `Transactions` product, never
 `Transfer`/`Payment Initiation`, so this only grants read access to real transaction data — no way
 to move money.
+
+---
+
+## 2026-09-18 — Dropped the todos feature entirely (superseding the 2026-08-19 Postgres entry)
+
+**Decision:** Removed the `todos` table, its API routes, and the Overview "Today" card, via
+`git revert` of the two commits that added them (issue #13). Todos aren't relocated anywhere —
+Overview is being rebuilt as an unsorted-transaction queue instead of a to-do list.
+
+**Why:** The 2026-08-19 "PostgreSQL as the database" entry above mentions Postgres handling "the
+planned todo/scheduling data" — that's no longer accurate now that todos are gone for good, but per
+this file's own append-only rule that entry is left as-is rather than edited; this entry is the
+correction. The feature had shipped to production code but the `todos` table was never actually
+migrated onto the production database, so this was a clean revert with no real user data at risk.
+
+**Note:** The two original commits (`4e1db79`, `4bee9c9`, closing issues #9/#10) were reverted
+rather than manually re-deleted, since both were already clean and self-contained and nothing had
+been built on top of them yet — a revert undoes the code, the migration, and their own
+ARCHITECTURE.md edits in one step. #9/#10 were left closed rather than reopened, since the feature
+isn't coming back.
+
+---
+
+## 2026-09-18 — Turned off Vercel's auto-deploy on push to `main`
+
+**Decision:** Set Vercel's "Ignored Build Step" (project Settings → Git) to always skip, so pushing
+to `main` no longer triggers a production deploy by itself. Deploying is now the explicit manual
+step `npx vercel --prod`.
+
+**Why:** With auto-deploy on, *every* push to `main` shipped to production immediately — including
+doc-only commits, reverts, and other changes that don't need a deploy at all. That made it easy to
+ship something accidentally (e.g. a revert commit meant purely to clean up git history) and gave no
+window to double-check a change before it went live. A manual deploy step costs one extra command
+when a deploy is actually wanted.

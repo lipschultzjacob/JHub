@@ -269,7 +269,9 @@ against it directly from your machine.
 
 The app is live at **https://j-hub-lippy-industries.vercel.app**, deployed to Vercel (project
 `j-hub` under the `lippy-industries` account) with its database on Neon. Pushing to `main` on
-GitHub automatically triggers a new deploy -- there's no separate manual step.
+GitHub does *not* trigger a deploy -- Vercel's project settings have "Ignored Build Step" (Settings
+→ Git) set to always skip, so every push just updates the repo. Deploying is a separate, manual
+step: `npx vercel --prod`.
 
 When the database's shape changes (`src/db/schema.ts` edited, a new migration generated), that
 migration also has to be applied to the *production* database separately from your local one:
