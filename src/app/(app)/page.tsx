@@ -1,17 +1,122 @@
 import Link from "next/link";
-import { buttonPrimary } from "@/components/recipes";
+import { desc, eq, isNull, and } from "drizzle-orm";
+import { db } from "@/db";
+import { transactions, plaidAccounts, plaidItems, categories } from "@/db/schema";
+import { auth } from "@/auth";
+import { CategorySelect } from "@/components/category-select";
+import { card, bodyText65, metaText45 } from "@/components/recipes";
 
-// The home page ("/") -- a simple restyled landing for now. The full
-// Overview screen (today's to-dos, the sort-queue, a monthly summary) needs
-// a "todos" table and category-guessing logic that don't exist yet --
-// tracked separately in issue #3.
-export default function Home() {
+// Without this, Next.js would try to bake this page's data in once at build
+// time, freezing the list. This forces the database queries below to re-run
+// on every visit, so newly synced transactions and category changes show up.
+export const dynamic = "force-dynamic";
+
+// The Overview screen ("/"): shows ONLY transactions that haven't been given a
+// category yet (an "unsorted queue"), so you can sort them right here. Once
+// you pick a category, CategorySelect saves it and refreshes the page, and
+// that row drops out of the list because it's no longer unsorted.
+//
+// This is a "Server Component" (see ARCHITECTURE.md): it queries the database
+// directly on the server. Only CategorySelect runs in the browser.
+//
+// The proxy (src/proxy.ts) already guarantees the visitor is logged in, so
+// session.user is safe to assume exists here.
+export default async function OverviewPage() {
+  const session = await auth();
+  const userId = Number(session!.user.id);
+
+  // Which banks this user has connected (only used to pick the right empty
+  // state below), and their own categories to choose from.
+  const items = await db.select().from(plaidItems).where(eq(plaidItems.userId, userId));
+  const allCategories = await db
+    .select()
+    .from(categories)
+    .where(eq(categories.userId, userId));
+
+  // This user's unsorted transactions (categoryId IS NULL), newest first, with
+  // each row's account name attached. The two inner joins also enforce
+  // ownership: transactions don't store a user id, so we filter through
+  // transactions -> plaidAccounts -> plaidItems.userId.
+  const rows = await db
+    .select({
+      id: transactions.id,
+      amount: transactions.amount,
+      merchantName: transactions.merchantName,
+      name: transactions.name,
+      date: transactions.date,
+      pending: transactions.pending,
+      categoryId: transactions.categoryId,
+      accountName: plaidAccounts.name,
+    })
+    .from(transactions)
+    .innerJoin(plaidAccounts, eq(transactions.plaidAccountId, plaidAccounts.id))
+    .innerJoin(plaidItems, eq(plaidAccounts.plaidItemId, plaidItems.id))
+    .where(and(eq(plaidItems.userId, userId), isNull(transactions.categoryId)))
+    .orderBy(desc(transactions.date));
+
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6">
-      <h1 className="font-heading text-[40px]">JHub</h1>
-      <Link href="/transactions" className={buttonPrimary}>
-        Transactions
-      </Link>
-    </div>
+    <>
+      <h1 className="font-heading text-[40px]">Overview</h1>
+
+      {rows.length > 0 && (
+        <p className={`text-sm ${bodyText65}`}>
+          {rows.length} to sort
+        </p>
+      )}
+
+      {/* Empty states: one for "no bank yet", one for "nothing left to sort". */}
+      {items.length === 0 && (
+        <div className={card}>
+          <p className={`text-sm ${bodyText65}`}>
+            No bank connected yet. Head to{" "}
+            <Link href="/settings" className="underline hover:text-accent">
+              Settings
+            </Link>{" "}
+            to connect one and start pulling in transactions.
+          </p>
+        </div>
+      )}
+      {items.length > 0 && rows.length === 0 && (
+        <div className={card}>
+          <p className={`text-sm ${bodyText65}`}>
+            You&apos;re all caught up -- every transaction has a category.
+          </p>
+        </div>
+      )}
+
+      <div className="flex flex-col">
+        {rows.map((row) => (
+          <div
+            key={row.id}
+            id={`transaction-${row.id}`}
+            // target:target-current highlights whichever row matches the
+            // page's #transaction-<id> URL fragment -- how a push
+            // notification points you straight at the transaction it's about.
+            className="flex flex-wrap scroll-mt-6 items-center justify-between gap-x-4 gap-y-2 border-b border-[color-mix(in_srgb,var(--color-text)_8%,transparent)] px-2 py-[var(--row-pad)] target:bg-[color-mix(in_srgb,var(--color-text)_4%,transparent)]"
+          >
+            <div className="min-w-[160px] flex-1">
+              <div className="truncate text-[15px]">
+                {row.merchantName ?? row.name}
+                {row.pending && (
+                  <span className={`ml-2 text-[11px] ${metaText45}`}>(pending)</span>
+                )}
+              </div>
+              <div className={`text-[11px] ${metaText45}`}>
+                {row.date} · {row.accountName}
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-4">
+              {/* Plaid convention: positive = money out, negative = money in */}
+              <span className="min-w-[92px] text-right text-[15px] tabular-nums">${row.amount}</span>
+              <CategorySelect
+                transactionId={row.id}
+                categoryId={row.categoryId}
+                categories={allCategories}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }

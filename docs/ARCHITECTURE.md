@@ -38,7 +38,7 @@ JHub/
 │   │   ├── manifest.ts            describes the app for "install as an app" purposes, auto-served at /manifest.webmanifest
 │   │   ├── (app)/                a "route group" -- the "(app)" folder name is invisible in the URL, it exists only so these pages can share one extra layout.tsx (the top Nav bar) without login/signup getting it too
 │   │   │   ├── layout.tsx          adds the shared Nav bar + page-width content wrapper around every page below
-│   │   │   ├── page.tsx             the home page, served at "/"
+│   │   │   ├── page.tsx             the Overview screen, served at "/": lists only unsorted transactions (categoryId IS NULL), newest first, each with an inline category dropdown; shows a "no bank connected" or "all caught up" message when the list is empty
 │   │   │   └── transactions/
 │   │   │       └── page.tsx      the transactions page: connect a bank, view transactions, assign categories
 │   │   ├── login/page.tsx          the login form (outside the "(app)" group -- no Nav bar, per the design system)
@@ -293,7 +293,11 @@ financial data now.
 ## Not yet built
 - In-notification quick-action category buttons (tapping a notification opens the app to
   categorize instead -- see "Push notifications" above)
-- Todos/scheduling and any other planned productivity-hub features beyond the financial tracking
+- Any other planned productivity-hub features beyond the financial tracking (the to-do list was
+  dropped -- see DECISIONS.md)
+- Settings screen (bank connect/sync, sign-out) -- Overview's "no bank connected" message already
+  links to /settings, which doesn't exist yet (issue #16); until then, connect/sync lives on
+  /transactions
 - Any way to reset a forgotten password (there's no "forgot password" email flow yet -- losing your
   password currently means losing access)
 - Bank connections made before this webhook-confirmation step existed don't get fixed
