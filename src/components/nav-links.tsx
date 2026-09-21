@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// More links (Categories, Settings) join this list once those screens exist
-// -- see docs/design/README.md's Nav spec for the full set.
+// More links (Settings) join this list once that screen exists.
 const links = [
   { href: "/", label: "Overview" },
+  { href: "/categories", label: "Categories" },
   { href: "/transactions", label: "Transactions" },
 ];
 
@@ -22,7 +22,11 @@ export function NavLinks() {
         <Link
           key={link.href}
           href={link.href}
-          aria-current={pathname === link.href ? "page" : undefined}
+          aria-current={
+            pathname === link.href || (link.href !== "/" && pathname.startsWith(`${link.href}/`))
+              ? "page"
+              : undefined
+          }
           className="text-sm hover:text-accent aria-[current=page]:text-accent"
         >
           {link.label}

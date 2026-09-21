@@ -35,8 +35,7 @@ export const inputBase =
 export const fieldLabel =
   "block text-xs mb-[5px] text-[color-mix(in_srgb,var(--color-text)_65%,transparent)]";
 
-// The design system's standard ink-opacity steps for secondary/meta text
-// (docs/design/README.md's "Text opacities are the workhorse" rule).
+// The design system's standard ink-opacity steps for secondary/meta text.
 export const bodyText65 = "text-[color-mix(in_srgb,var(--color-text)_65%,transparent)]";
 export const metaText45 = "text-[color-mix(in_srgb,var(--color-text)_45%,transparent)]";
 

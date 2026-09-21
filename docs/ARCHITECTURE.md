@@ -39,6 +39,9 @@ JHub/
 │   │   ├── (app)/                a "route group" -- the "(app)" folder name is invisible in the URL, it exists only so these pages can share one extra layout.tsx (the top Nav bar) without login/signup getting it too
 │   │   │   ├── layout.tsx          adds the shared Nav bar + page-width content wrapper around every page below
 │   │   │   ├── page.tsx             the Overview screen, served at "/": lists only unsorted transactions (categoryId IS NULL), newest first, each with an inline category dropdown; shows a "no bank connected" or "all caught up" message when the list is empty
+│   │   │   ├── categories/
+│   │   │   │   ├── page.tsx          the Categories list, served at "/categories": one card per category with its transaction count, each linking to its detail page
+│   │   │   │   └── [id]/page.tsx     one category's detail page ("/categories/3"): verifies the category belongs to the signed-in user (else 404), then lists its transactions with a dropdown to re-sort each
 │   │   │   └── transactions/
 │   │   │       └── page.tsx      the transactions page: connect a bank, view transactions, assign categories
 │   │   ├── login/page.tsx          the login form (outside the "(app)" group -- no Nav bar, per the design system)
@@ -61,6 +64,7 @@ JHub/
 │   │   ├── nav.tsx                the top nav bar shown on every signed-in page (a Server Component -- looks up the signed-in email directly rather than reacting to anything)
 │   │   ├── nav-links.tsx          the nav's page links, split out as a Client Component since only the browser knows the current URL (to mark the active link)
 │   │   ├── recipes.ts             shared Tailwind class-name strings (buttons, inputs, cards) from the design system, so components don't each repeat -- or drift out of sync with -- the same long class string. Not a component; plain exported strings
+│   │   ├── transaction-row.tsx    one transaction in a list (merchant, date/account, amount, category dropdown); a Server Component shared by Overview and the category detail page
 │   │   ├── sign-out-button.tsx
 │   │   ├── plaid-link-button.tsx
 │   │   ├── sync-button.tsx

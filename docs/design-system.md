@@ -1,7 +1,10 @@
 # JHub design system
 
-The binding visual rules for this app. Read before adding or changing any UI.
-Full spec with per-screen detail: `design_handoff_jhub_ui/README.md`.
+The binding visual rules for this app. Read before adding or changing any UI. This file is the
+whole spec — there is no separate per-screen mockup doc to defer to. When building or reworking a
+screen, follow the rules below (colors, type, radii, component patterns in `design/components.md`)
+and use judgment for layout; don't treat any one screen's past implementation as a template to
+copy literally.
 
 ## The idea
 
