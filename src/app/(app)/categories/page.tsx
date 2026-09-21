@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { asc, count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, transactions } from "@/db/schema";
 import { auth } from "@/auth";
-import { card, bodyText65, metaText45 } from "@/components/recipes";
+import { CategoryCard } from "@/components/category-card";
+import { card, bodyText65 } from "@/components/recipes";
 
 // Re-run the queries on every visit instead of freezing the page at build
 // time, so counts stay current as transactions are sorted.
@@ -50,16 +50,7 @@ export default async function CategoriesPage() {
       {/* Cards wrap into as many columns as fit (docs/design/components.md) */}
       <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
         {rows.map((row) => (
-          <Link
-            key={row.id}
-            href={`/categories/${row.id}`}
-            className={`${card} transition-colors duration-150 hover:border-accent`}
-          >
-            <h4 className="truncate text-[15px]">{row.name}</h4>
-            <span className={`text-[11px] ${metaText45}`}>
-              {row.total} {row.total === 1 ? "transaction" : "transactions"}
-            </span>
-          </Link>
+          <CategoryCard key={row.id} id={row.id} name={row.name} total={row.total} />
         ))}
       </div>
     </>

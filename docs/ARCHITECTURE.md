@@ -40,7 +40,7 @@ JHub/
 │   │   │   ├── layout.tsx          adds the shared Nav bar + page-width content wrapper around every page below
 │   │   │   ├── page.tsx             the Overview screen, served at "/": lists only unsorted transactions (categoryId IS NULL), newest first, each with an inline category dropdown; shows a "no bank connected" or "all caught up" message when the list is empty
 │   │   │   ├── categories/
-│   │   │   │   ├── page.tsx          the Categories list, served at "/categories": one card per category with its transaction count, each linking to its detail page
+│   │   │   │   ├── page.tsx          the Categories list, served at "/categories": one card per category (a `CategoryCard`) with its transaction count, linking to its detail page, plus an inline Rename
 │   │   │   │   └── [id]/page.tsx     one category's detail page ("/categories/3"): verifies the category belongs to the signed-in user (else 404), then lists its transactions with a dropdown to re-sort each
 │   │   │   └── settings/
 │   │   │       └── page.tsx          the Settings screen, served at "/settings": connected-banks list (with per-bank Disconnect), connect-another and sync buttons, and Sign out
@@ -58,6 +58,7 @@ JHub/
 │   │       │   └── webhook/       Plaid calls this automatically the moment a new transaction happens
 │   │       ├── push/
 │   │       │   └── subscribe/     saves/removes a browser's push notification subscription
+│   │       ├── categories/[id]/   PATCH renames one category (trimmed, 1-40 chars, no case-insensitive duplicate among your own categories; 404 if it isn't yours)
 │   │       └── transactions/[id]/ lets the frontend set which category a transaction belongs to
 │   ├── components/               Interactive pieces of the UI (buttons, dropdowns) that run in the browser
 │   │   ├── service-worker-registration.tsx
@@ -71,6 +72,7 @@ JHub/
 │   │   ├── plaid-link-button.tsx
 │   │   ├── sync-button.tsx
 │   │   ├── push-subscribe-button.tsx  turns on push notifications for this browser
+│   │   ├── category-card.tsx      one card on the Categories list: name link + count, with an inline Rename (text box, Save/Cancel; calls PATCH /api/categories/[id])
 │   │   └── category-select.tsx
 │   ├── db/
 │   │   ├── schema.ts              defines the shape of every database table in TypeScript — this file is the single source of truth for what the database looks like
