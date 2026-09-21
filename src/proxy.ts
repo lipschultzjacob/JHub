@@ -16,7 +16,7 @@ export default auth((req) => {
   }
   if (isLoggedIn && isAuthPage) {
     // Already signed in -- no reason to show the login/signup forms again.
-    return NextResponse.redirect(new URL("/transactions", req.nextUrl));
+    return NextResponse.redirect(new URL("/", req.nextUrl));
   }
 });
 

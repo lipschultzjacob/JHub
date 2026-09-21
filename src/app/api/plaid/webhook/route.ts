@@ -71,13 +71,13 @@ async function notifyUser(userId: number, newTransactions: NewTransaction[]) {
       ? newTransactions.map((t) => ({
           title: t.merchantName ?? t.name,
           body: `$${t.amount}`,
-          url: `/transactions#transaction-${t.id}`,
+          url: `/#transaction-${t.id}`,
         }))
       : [
           {
             title: `${newTransactions.length} new transactions`,
             body: "Tap to review and categorize",
-            url: "/transactions",
+            url: "/",
           },
         ];
 

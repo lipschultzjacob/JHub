@@ -18,7 +18,7 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Runs when the form is submitted: attempts to log in, then either shows
-  // an error or sends you to the transactions page.
+  // an error or sends you to the Overview page.
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
@@ -36,7 +36,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/transactions");
+    router.push("/");
     router.refresh();
   }
 

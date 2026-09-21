@@ -6,7 +6,7 @@ import { auth } from "@/auth";
 
 // Sets (or clears, if categoryId is null) which budgeting category one
 // transaction belongs to. This is what the category dropdown on the
-// transactions page calls when you pick a category, and later this is what
+// Overview and category pages calls when you pick a category, and later this is what
 // the push notification's built-in category picker will call too.
 export async function PATCH(
   request: Request,

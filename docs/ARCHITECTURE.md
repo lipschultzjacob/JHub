@@ -42,10 +42,8 @@ JHub/
 │   │   │   ├── categories/
 │   │   │   │   ├── page.tsx          the Categories list, served at "/categories": one card per category with its transaction count, each linking to its detail page
 │   │   │   │   └── [id]/page.tsx     one category's detail page ("/categories/3"): verifies the category belongs to the signed-in user (else 404), then lists its transactions with a dropdown to re-sort each
-│   │   │   ├── settings/
-│   │   │   │   └── page.tsx          the Settings screen, served at "/settings": connected-banks list (with per-bank Disconnect), connect-another and sync buttons, and Sign out
-│   │   │   └── transactions/
-│   │   │       └── page.tsx      the transactions page: connect a bank, view transactions, assign categories
+│   │   │   └── settings/
+│   │   │       └── page.tsx          the Settings screen, served at "/settings": connected-banks list (with per-bank Disconnect), connect-another and sync buttons, and Sign out
 │   │   ├── login/page.tsx          the login form (outside the "(app)" group -- no Nav bar, per the design system)
 │   │   ├── signup/page.tsx         the create-account form (same)
 │   │   └── api/                  backend endpoints the frontend calls (no separate backend project needed)
@@ -222,7 +220,7 @@ one user's data is never visible or editable by another.
    `plaid_items` row -- cascading to its accounts and all their transactions, categorized or not.
    If Plaid's call fails the local row is kept so you can retry (unless Plaid says the item is
    already gone, which counts as success).
-6. The category dropdown on the transactions page calls `PATCH /api/transactions/[id]` to save
+6. The category dropdown on Overview and the category detail pages calls `PATCH /api/transactions/[id]` to save
    which category you picked.
 
 ### Push notifications
@@ -246,7 +244,7 @@ The actual "notify me the moment I spend money" feature. Three pieces:
    transaction" message), then runs the same sync logic as the manual button, then sends a push
    notification (`src/lib/web-push.ts`, using the VAPID keys) to every one of that user's saved
    subscriptions. `public/sw.js`'s `push` handler is what actually displays it, and tapping it opens
-   the app straight to that transaction (`/transactions#transaction-<id>`) to categorize it there --
+   the app straight to that transaction on Overview (`/#transaction-<id>`, or just `/` for the combined "N new transactions" summary) to categorize it there --
    full in-notification category buttons were considered but skipped for now (see DECISIONS.md):
    browsers only allow ~2 actions directly on a notification, and iOS doesn't support them at all.
 
@@ -309,8 +307,9 @@ financial data now.
 - Any other planned productivity-hub features beyond the financial tracking (the to-do list was
   dropped -- see DECISIONS.md)
 - Password change, email change, account deletion (Settings only has bank management + sign-out)
-- A notification on/off toggle -- `push-subscribe-button.tsx` currently still sits on the
-  Transactions page, which is slated for removal, so it needs a new home
+- A notification on/off toggle -- `push-subscribe-button.tsx` has no home since the Transactions
+  page was removed (issue #17), so a new browser can't currently subscribe to push notifications
+  until issue #19 lands. Already-subscribed browsers keep receiving them.
 - Any way to reset a forgotten password (there's no "forgot password" email flow yet -- losing your
   password currently means losing access)
 - Bank connections made before this webhook-confirmation step existed don't get fixed
