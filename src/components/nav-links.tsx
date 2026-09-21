@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// More links (Settings) join this list once that screen exists.
 const links = [
   { href: "/", label: "Overview" },
   { href: "/categories", label: "Categories" },
   { href: "/transactions", label: "Transactions" },
+  { href: "/settings", label: "Settings" },
 ];
 
 // The nav's page links, split into their own Client Component because only

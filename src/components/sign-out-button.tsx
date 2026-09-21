@@ -3,8 +3,7 @@
 import { signOut } from "next-auth/react";
 import { buttonGhost } from "@/components/recipes";
 
-// A "Sign out" button. Temporarily lives in the top Nav (src/components/nav.tsx)
-// since Settings -- its spec'd home -- doesn't exist yet.
+// A "Sign out" button, shown on the Settings screen.
 export function SignOutButton() {
   return (
     <button onClick={() => signOut({ callbackUrl: "/login" })} className={buttonGhost}>

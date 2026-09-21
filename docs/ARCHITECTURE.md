@@ -42,6 +42,8 @@ JHub/
 │   │   │   ├── categories/
 │   │   │   │   ├── page.tsx          the Categories list, served at "/categories": one card per category with its transaction count, each linking to its detail page
 │   │   │   │   └── [id]/page.tsx     one category's detail page ("/categories/3"): verifies the category belongs to the signed-in user (else 404), then lists its transactions with a dropdown to re-sort each
+│   │   │   ├── settings/
+│   │   │   │   └── page.tsx          the Settings screen, served at "/settings": connected-banks list (with per-bank Disconnect), connect-another and sync buttons, and Sign out
 │   │   │   └── transactions/
 │   │   │       └── page.tsx      the transactions page: connect a bank, view transactions, assign categories
 │   │   ├── login/page.tsx          the login form (outside the "(app)" group -- no Nav bar, per the design system)
@@ -53,6 +55,7 @@ JHub/
 │   │       ├── plaid/
 │   │       │   ├── link-token/    creates a short-lived token so the browser can open Plaid's "connect your bank" popup
 │   │       │   ├── exchange-token/ turns that popup's result into a real, long-lived connection to your bank
+│   │       │   ├── items/[id]/    DELETE disconnects one bank: revokes it at Plaid (itemRemove), then deletes the local row (which cascades to its accounts and transactions)
 │   │       │   ├── sync/          fetches new transactions from Plaid (manual fallback -- the webhook below does this automatically)
 │   │       │   └── webhook/       Plaid calls this automatically the moment a new transaction happens
 │   │       ├── push/
@@ -65,7 +68,8 @@ JHub/
 │   │   ├── nav-links.tsx          the nav's page links, split out as a Client Component since only the browser knows the current URL (to mark the active link)
 │   │   ├── recipes.ts             shared Tailwind class-name strings (buttons, inputs, cards) from the design system, so components don't each repeat -- or drift out of sync with -- the same long class string. Not a component; plain exported strings
 │   │   ├── transaction-row.tsx    one transaction in a list (merchant, date/account, amount, category dropdown); a Server Component shared by Overview and the category detail page
-│   │   ├── sign-out-button.tsx
+│   │   ├── sign-out-button.tsx    shown on the Settings screen
+│   │   ├── disconnect-bank-button.tsx  the per-bank Disconnect button on Settings: confirm popup, calls DELETE /api/plaid/items/[id], then refreshes
 │   │   ├── plaid-link-button.tsx
 │   │   ├── sync-button.tsx
 │   │   ├── push-subscribe-button.tsx  turns on push notifications for this browser
@@ -213,7 +217,12 @@ one user's data is never visible or editable by another.
    instead of resending everything. New/changed transactions are saved with an "upsert" (insert it
    if it's new, update it if it already exists) — and updating deliberately never overwrites a
    category you already picked by hand.
-5. The category dropdown on the transactions page calls `PATCH /api/transactions/[id]` to save
+5. Disconnecting a bank (Settings → Disconnect) calls `DELETE /api/plaid/items/[id]`, which checks
+   the item belongs to you, tells Plaid to revoke it (`itemRemove`), and only then deletes the local
+   `plaid_items` row -- cascading to its accounts and all their transactions, categorized or not.
+   If Plaid's call fails the local row is kept so you can retry (unless Plaid says the item is
+   already gone, which counts as success).
+6. The category dropdown on the transactions page calls `PATCH /api/transactions/[id]` to save
    which category you picked.
 
 ### Push notifications
@@ -299,9 +308,9 @@ financial data now.
   categorize instead -- see "Push notifications" above)
 - Any other planned productivity-hub features beyond the financial tracking (the to-do list was
   dropped -- see DECISIONS.md)
-- Settings screen (bank connect/sync, sign-out) -- Overview's "no bank connected" message already
-  links to /settings, which doesn't exist yet (issue #16); until then, connect/sync lives on
-  /transactions
+- Password change, email change, account deletion (Settings only has bank management + sign-out)
+- A notification on/off toggle -- `push-subscribe-button.tsx` currently still sits on the
+  Transactions page, which is slated for removal, so it needs a new home
 - Any way to reset a forgotten password (there's no "forgot password" email flow yet -- losing your
   password currently means losing access)
 - Bank connections made before this webhook-confirmation step existed don't get fixed

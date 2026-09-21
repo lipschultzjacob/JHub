@@ -508,3 +508,22 @@ doc-only commits, reverts, and other changes that don't need a deploy at all. Th
 ship something accidentally (e.g. a revert commit meant purely to clean up git history) and gave no
 window to double-check a change before it went live. A manual deploy step costs one extra command
 when a deploy is actually wanted.
+
+
+---
+
+## 2026-09-21 — Bank disconnect calls Plaid's `itemRemove` explicitly (issue #16)
+
+**Decision:** Disconnecting a bank (`DELETE /api/plaid/items/[id]`) first calls Plaid's `itemRemove`
+to revoke the connection, and only then deletes the local `plaid_items` row. If `itemRemove`
+fails, the local row is kept and an error is shown so the disconnect can be retried -- except for
+Plaid's `ITEM_NOT_FOUND` error, which is treated as success (Plaid already dropped it).
+
+**Why:** Deleting only our own row would cascade to the accounts and transactions locally, but the
+`access_token` would stay live at Plaid with no record of it on our side -- a credential we could
+no longer see or revoke. Failing loudly on a Plaid error avoids that silent leftover.
+
+**Tradeoff:** Disconnecting also permanently deletes that bank's transactions, including ones
+already categorized (the schema's existing cascade delete). Reconnecting re-imports them
+uncategorized. Keeping transactions after a disconnect would need a schema change and was
+deliberately left out of scope. The confirm popup warns about this.
