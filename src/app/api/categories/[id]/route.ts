@@ -1,20 +1,19 @@
 import { NextResponse } from "next/server";
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { categories } from "@/db/schema";
 import { auth } from "@/auth";
+import { validateCategoryName, isCategoryNameTaken, isUniqueViolation } from "@/lib/category-name";
 
-const MAX_NAME_LENGTH = 40;
-
-// Renames one category (PATCH /api/categories/<id>, body: { name }). This is
-// what the "Rename" control on the Categories list calls.
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// Shared first steps for both handlers below: confirms someone is signed in,
+// and that the category id in the URL belongs to them. Returns either the
+// ids to work with, or the error response to send back as-is.
+async function findOwnedCategory(
+  params: Promise<{ id: string }>
+): Promise<{ userId: number; categoryId: number } | { response: NextResponse }> {
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return { response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   }
   const userId = Number(session.user.id);
 
@@ -22,7 +21,7 @@ export async function PATCH(
   const categoryId = Number(id);
   // A non-numeric id (e.g. /categories/abc) can't match any row.
   if (!Number.isInteger(categoryId)) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return { response: NextResponse.json({ error: "Not found" }, { status: 404 }) };
   }
 
   // Confirm the category is this user's own -- the id in the URL alone is
@@ -32,43 +31,35 @@ export async function PATCH(
     .from(categories)
     .where(and(eq(categories.id, categoryId), eq(categories.userId, userId)));
   if (!category) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return { response: NextResponse.json({ error: "Not found" }, { status: 404 }) };
   }
 
-  // Validate the new name: must be text, non-empty once surrounding spaces
-  // are trimmed off, and not absurdly long.
+  return { userId, categoryId };
+}
+
+// Renames one category (PATCH /api/categories/<id>, body: { name }). This is
+// what the "Rename" control on the Categories list calls.
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const owned = await findOwnedCategory(params);
+  if ("response" in owned) return owned.response;
+  const { userId, categoryId } = owned;
+
   const body = await request.json().catch(() => null);
-  const name = typeof body?.name === "string" ? body.name.trim() : "";
-  if (name.length === 0) {
-    return NextResponse.json({ error: "Name can't be empty." }, { status: 400 });
-  }
-  if (name.length > MAX_NAME_LENGTH) {
-    return NextResponse.json(
-      { error: `Name can be at most ${MAX_NAME_LENGTH} characters.` },
-      { status: 400 }
-    );
+  const { name, error } = validateCategoryName(body);
+  if (error !== undefined) {
+    return NextResponse.json({ error }, { status: 400 });
   }
 
   const duplicateError = NextResponse.json(
     { error: "You already have a category with that name." },
     { status: 409 }
   );
-
-  // The database's own uniqueness rule is case-sensitive ("groceries" and
-  // "Groceries" would both be allowed), so check case-insensitively here
-  // too, against this user's OTHER categories (renaming to its own current
-  // name, or just changing its capitalization, is fine).
-  const [clash] = await db
-    .select({ id: categories.id })
-    .from(categories)
-    .where(
-      and(
-        eq(categories.userId, userId),
-        ne(categories.id, categoryId),
-        sql`lower(${categories.name}) = lower(${name})`
-      )
-    );
-  if (clash) return duplicateError;
+  // Checked against this user's OTHER categories only, so renaming to its
+  // own current name, or just changing its capitalization, is fine.
+  if (await isCategoryNameTaken(userId, name, categoryId)) return duplicateError;
 
   try {
     const [updated] = await db
@@ -78,11 +69,27 @@ export async function PATCH(
       .returning();
     return NextResponse.json(updated);
   } catch (err) {
-    // Postgres "unique violation" error (code 23505): another
-    // request took this exact name between the check above and this update.
-    const code =
-      (err as { code?: string }).code ?? (err as { cause?: { code?: string } }).cause?.code;
-    if (code === "23505") return duplicateError;
+    if (isUniqueViolation(err)) return duplicateError;
     throw err;
   }
+}
+
+// Deletes one category (DELETE /api/categories/<id>). This is what the
+// "Delete" control on the Categories list calls, after you confirm.
+// Transactions that were sorted into it aren't deleted: the database's
+// "on delete set null" rule on transactions.category_id (src/db/schema.ts)
+// clears their category automatically, so they reappear as unsorted on
+// Overview.
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const owned = await findOwnedCategory(params);
+  if ("response" in owned) return owned.response;
+  const { userId, categoryId } = owned;
+
+  await db
+    .delete(categories)
+    .where(and(eq(categories.id, categoryId), eq(categories.userId, userId)));
+  return NextResponse.json({ success: true });
 }

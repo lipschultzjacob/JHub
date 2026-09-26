@@ -38,9 +38,9 @@ JHub/
 │   │   ├── manifest.ts            describes the app for "install as an app" purposes, auto-served at /manifest.webmanifest
 │   │   ├── (app)/                a "route group" -- the "(app)" folder name is invisible in the URL, it exists only so these pages can share one extra layout.tsx (the top Nav bar) without login/signup getting it too
 │   │   │   ├── layout.tsx          adds the shared Nav bar + page-width content wrapper around every page below
-│   │   │   ├── page.tsx             the Overview screen, served at "/": lists only unsorted transactions (categoryId IS NULL), newest first, each with an inline category dropdown; shows a "no bank connected" or "all caught up" message when the list is empty
+│   │   │   ├── page.tsx             the Overview screen, served at "/": lists only unsorted transactions (categoryId IS NULL), newest first, each with an inline category dropdown; shows a "no bank connected" or "all caught up" message when the list is empty, and a pointer to Categories when there are unsorted transactions but you have no categories yet
 │   │   │   ├── categories/
-│   │   │   │   ├── page.tsx          the Categories list, served at "/categories": one card per category (a `CategoryCard`) with its transaction count, linking to its detail page, plus an inline Rename
+│   │   │   │   ├── page.tsx          the Categories list, served at "/categories": a "+ New category" card first (a `NewCategoryCard` -- the only place categories get created), then one card per category (a `CategoryCard`) with its transaction count, linking to its detail page, plus inline Rename and Delete
 │   │   │   │   └── [id]/page.tsx     one category's detail page ("/categories/3"): verifies the category belongs to the signed-in user (else 404), then lists its transactions with a dropdown to re-sort each
 │   │   │   └── settings/
 │   │   │       └── page.tsx          the Settings screen, served at "/settings": connected-banks list (with per-bank Disconnect), connect-another and sync buttons, and Sign out
@@ -58,7 +58,8 @@ JHub/
 │   │       │   └── webhook/       Plaid calls this automatically the moment a new transaction happens
 │   │       ├── push/
 │   │       │   └── subscribe/     saves/removes a browser's push notification subscription
-│   │       ├── categories/[id]/   PATCH renames one category (trimmed, 1-40 chars, no case-insensitive duplicate among your own categories; 404 if it isn't yours)
+│   │       ├── categories/        POST creates a category for you (same name rules as rename below)
+│   │       ├── categories/[id]/   PATCH renames one category (trimmed, 1-40 chars, no case-insensitive duplicate among your own categories; 404 if it isn't yours); DELETE removes it (its transactions become unsorted, via the schema's "on delete set null")
 │   │       └── transactions/[id]/ lets the frontend set which category a transaction belongs to
 │   ├── components/               Interactive pieces of the UI (buttons, dropdowns) that run in the browser
 │   │   ├── service-worker-registration.tsx
@@ -72,7 +73,8 @@ JHub/
 │   │   ├── plaid-link-button.tsx
 │   │   ├── sync-button.tsx
 │   │   ├── push-subscribe-button.tsx  turns on push notifications for this browser
-│   │   ├── category-card.tsx      one card on the Categories list: name link + count, with an inline Rename (text box, Save/Cancel; calls PATCH /api/categories/[id])
+│   │   ├── category-card.tsx      one card on the Categories list: name link + count, with an inline Rename (text box, Save/Cancel; calls PATCH /api/categories/[id]) and an inline Delete confirmation ("Delete X? N transactions will go back to unsorted"; calls DELETE /api/categories/[id])
+│   │   ├── new-category-card.tsx  the "+ New category" card at the start of the Categories list: opens a name box with Save/Cancel; calls POST /api/categories
 │   │   └── category-select.tsx
 │   ├── db/
 │   │   ├── schema.ts              defines the shape of every database table in TypeScript — this file is the single source of truth for what the database looks like
@@ -82,7 +84,7 @@ JHub/
 │   │   ├── plaid-sync.ts          the actual "fetch new transactions and save them" logic, shared by the manual sync button and the webhook
 │   │   ├── plaid-webhook-verify.ts confirms an incoming webhook request genuinely came from Plaid
 │   │   ├── web-push.ts            sends a push notification to one saved subscription
-│   │   ├── default-categories.ts  the starter category list given to every new account
+│   │   ├── category-name.ts       server-only naming rules shared by category create and rename: trim + length check, and the case-insensitive "you already have that name" check
 │   │   ├── crypto.ts              encrypts/decrypts the Plaid access_token before it's stored (see Database below)
 │   │   └── rate-limit.ts          blocks repeated login/signup attempts past a threshold (see Login below)
 │   ├── types/
@@ -91,8 +93,7 @@ JHub/
 │   └── proxy.ts                   runs before every page request; redirects signed-out visitors to /login (see "Login" below)
 ├── drizzle/                      Auto-generated files describing each change ever made to the database's structure (a "migration" — see Database section). Don't hand-edit these; they're regenerated from schema.ts
 ├── scripts/
-│   ├── generate-icons.mjs        regenerates the app's icon images (currently simple placeholders — rerun this once real branding/logo exists)
-│   └── seed-categories.ts        adds the default categories to one existing account by email (new accounts get these automatically at signup instead)
+│   └── generate-icons.mjs        regenerates the app's icon images (currently simple placeholders — rerun this once real branding/logo exists)
 ├── public/
 │   ├── sw.js                     the service worker (explained below)
 │   └── icons/                    icon image files used by manifest.ts and layout.tsx
@@ -144,7 +145,7 @@ Logging in uses Auth.js's "Credentials" provider (a plain email+password form) -
 `src/auth.ts` contains the actual logic that checks a typed-in password against the scrambled
 version stored in the `users` table (see Database below). Auth.js doesn't handle creating new
 accounts itself, only logging in, so `POST /api/auth/signup` is a small custom-written endpoint
-that creates the account (and gives it a starter set of categories) before immediately logging it in.
+that creates the account (with no categories -- you create your own on the Categories screen) before immediately logging it in.
 
 Sessions use the "JWT" strategy: your logged-in state lives in an encrypted browser cookie rather
 than a database row, which is simpler to set up but means there's no way to remotely force one
@@ -171,9 +172,9 @@ change to the actual database). Never hand-edit the generated migration files.
 Current tables:
 - `users` — one row per person who can log in; stores their email and a scrambled (never
   reversible) version of their password
-- `categories` — the budgeting categories you sort transactions into, one set per user (new
-  accounts get a starter set automatically at signup; `npm run db:seed -- you@example.com` can
-  re-add them to an existing account)
+- `categories` — the budgeting categories you sort transactions into, one set per user. New
+  accounts start with none; every category is created by the user on the Categories screen
+  (`POST /api/categories`)
 - `plaid_items` — one row per bank a user has connected; holds the credential Plaid gave us for
   that connection (encrypted -- see the Plaid section below) and a bookmark ("cursor," see below) of
   how far we've synced

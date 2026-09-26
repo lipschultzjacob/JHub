@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/db";
-import { users, categories } from "@/db/schema";
-import { DEFAULT_CATEGORIES } from "@/lib/default-categories";
+import { users } from "@/db/schema";
 import { isRateLimited } from "@/lib/rate-limit";
 
 // Creates a new account. Auth.js itself only handles logging in, not
@@ -39,13 +38,10 @@ export async function POST(request: Request) {
   // checking it is.
   const passwordHash = await bcrypt.hash(password, 10);
 
-  let userId: number;
+  // New accounts start with no categories -- you create your own on the
+  // Categories screen.
   try {
-    const [user] = await db
-      .insert(users)
-      .values({ email, passwordHash })
-      .returning({ id: users.id });
-    userId = user.id;
+    await db.insert(users).values({ email, passwordHash });
   } catch (err) {
     // Postgres error code 23505 specifically means "unique constraint
     // violated" -- that's the real signal that this email is already taken
@@ -68,11 +64,6 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-
-  // Give the new user their own starter set of budgeting categories right away.
-  await db
-    .insert(categories)
-    .values(DEFAULT_CATEGORIES.map((c) => ({ ...c, userId })));
 
   return NextResponse.json({ success: true });
 }

@@ -527,3 +527,26 @@ no longer see or revoke. Failing loudly on a Plaid error avoids that silent left
 already categorized (the schema's existing cascade delete). Reconnecting re-imports them
 uncategorized. Keeping transactions after a disconnect would need a schema change and was
 deliberately left out of scope. The confirm popup warns about this.
+
+---
+
+## 2026-09-25 — New accounts start with no categories; users create their own
+
+**Decision:** Signup no longer inserts a starter set of 11 categories. Categories are only created
+by the user, from a "+ New category" card on the Categories screen (`POST /api/categories`), and
+can now also be deleted there (`DELETE /api/categories/[id]`) after an inline confirmation. The old
+default list (`src/lib/default-categories.ts`) and its `npm run db:seed` script were removed
+entirely rather than kept as an optional starter pack.
+
+**Why:** A pre-made list is someone else's idea of a budget. Starting empty means every category
+on the screen is one you actually chose, and there's only one way categories come into existence.
+
+**Existing accounts:** No migration or one-off cleanup deletes the categories that accounts already
+got at signup -- they're removed by hand with the new Delete button instead, so nothing disappears
+without being seen first.
+
+**Tradeoff:** Deleting a category doesn't delete its transactions; the existing "on delete set
+null" rule on `transactions.category_id` sends them back to unsorted on Overview, and the confirm
+says how many. A brand-new account can't sort anything until it creates a category, so Overview
+shows a pointer to Categories in that case. New categories get no color (`categories.color` stays
+null) -- no screen displays color yet, so picking one is left to a future recolor feature.

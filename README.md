@@ -33,10 +33,9 @@ into todos/scheduling and other productivity features over time.
    docker compose up -d
    ```
 
-4. Run migrations and seed default categories:
+4. Run migrations:
    ```bash
    npm run db:migrate
-   npm run db:seed
    ```
 
 5. Start the dev server:
@@ -54,7 +53,6 @@ into todos/scheduling and other productivity features over time.
 | `npm run lint` | Lint |
 | `npm run db:generate` | Generate a migration from `src/db/schema.ts` changes |
 | `npm run db:migrate` | Apply pending migrations |
-| `npm run db:seed` | Seed default budgeting categories (idempotent) |
 | `npm run db:studio` | Open Drizzle Studio (visual DB browser) |
 | `node scripts/generate-icons.mjs` | Regenerate PWA icon PNGs |
 

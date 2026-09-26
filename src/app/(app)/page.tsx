@@ -64,6 +64,20 @@ export default async function OverviewPage() {
         </p>
       )}
 
+      {/* With nothing to pick from, every dropdown below would only offer
+          "Uncategorized" -- point to where categories get created. */}
+      {rows.length > 0 && allCategories.length === 0 && (
+        <div className={card}>
+          <p className={`text-sm ${bodyText65}`}>
+            You don&apos;t have any categories yet. Create some on{" "}
+            <Link href="/categories" className="underline hover:text-accent">
+              Categories
+            </Link>{" "}
+            to start sorting.
+          </p>
+        </div>
+      )}
+
       {/* Empty states: one for "no bank yet", one for "nothing left to sort". */}
       {items.length === 0 && (
         <div className={card}>

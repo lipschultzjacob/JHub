@@ -26,7 +26,6 @@ npm run lint                  # ESLint
 npm run db:generate           # generate a migration from src/db/schema.ts changes
 npm run db:migrate            # apply pending migrations (local DB, via .env.local)
 npm run db:studio             # visual DB browser
-npm run db:seed -- you@example.com   # (re-)add default categories to one existing account
 
 node scripts/generate-icons.mjs      # regenerate placeholder PWA icons
 ```

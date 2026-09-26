@@ -3,15 +3,18 @@ import { db } from "@/db";
 import { categories, transactions } from "@/db/schema";
 import { auth } from "@/auth";
 import { CategoryCard } from "@/components/category-card";
+import { NewCategoryCard } from "@/components/new-category-card";
 import { card, bodyText65 } from "@/components/recipes";
 
 // Re-run the queries on every visit instead of freezing the page at build
 // time, so counts stay current as transactions are sorted.
 export const dynamic = "force-dynamic";
 
-// The Categories list ("/categories"): one card per category you own, showing
-// how many transactions are sorted into it. Clicking a card opens
-// /categories/[id], which lists those transactions.
+// The Categories list ("/categories"): a "+ New category" card first (the
+// only place categories get created -- new accounts start with none), then
+// one card per category you own, showing how many transactions are sorted
+// into it. Clicking a card opens /categories/[id], which lists those
+// transactions.
 //
 // A "Server Component" (see ARCHITECTURE.md): it queries the database
 // directly. The proxy (src/proxy.ts) already guarantees you're logged in.
@@ -43,12 +46,15 @@ export default async function CategoriesPage() {
 
       {rows.length === 0 && (
         <div className={card}>
-          <p className={`text-sm ${bodyText65}`}>No categories yet.</p>
+          <p className={`text-sm ${bodyText65}`}>
+            No categories yet. Create one below to start sorting your transactions.
+          </p>
         </div>
       )}
 
       {/* Cards wrap into as many columns as fit (docs/design/components.md) */}
       <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+        <NewCategoryCard />
         {rows.map((row) => (
           <CategoryCard key={row.id} id={row.id} name={row.name} total={row.total} />
         ))}
