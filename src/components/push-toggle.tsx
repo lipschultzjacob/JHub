@@ -93,7 +93,7 @@ export function PushToggle() {
                 ? "Turn off"
                 : "Turn on"}
           </button>
-          {error && <span className="text-xs text-red-400">{error}</span>}
+          {error && <span className="text-xs text-red">{error}</span>}
         </div>
       )}
     </>

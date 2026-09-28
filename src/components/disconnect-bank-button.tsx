@@ -43,7 +43,7 @@ export function DisconnectBankButton({
       <button onClick={handleClick} disabled={isPending} className={buttonSecondary}>
         {isPending ? "Disconnecting..." : "Disconnect"}
       </button>
-      {error && <span className="text-xs text-red-400">{error}</span>}
+      {error && <span className="text-xs text-red">{error}</span>}
     </div>
   );
 }

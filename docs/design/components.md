@@ -10,12 +10,25 @@ Shorthands used below:
 - `FILL-4` = `bg-[color-mix(in_srgb,var(--color-text)_4%,transparent)]`
 - `RULE`   = `border-b border-[color-mix(in_srgb,var(--color-text)_8%,transparent)]`
 
+## Tokens and iPhone basics (src/app/globals.css)
+
+Colors (each switches between Light and Dark on its own; see docs/design-system.md):
+`bg-bg`, `bg-surface`, `text-text`, `text-text-secondary`, `border-separator`, `bg-fill-pressed`,
+`text-accent` / `bg-accent` (the tint), `text-on-accent` (text on a filled tint button),
+`text-green` (money in), `text-red` (destructive, errors).
+
+Type (Apple's text styles, size + line height + weight in one class): `text-large-title`,
+`text-title3`, `text-headline`, `text-body`, `text-subheadline`, `text-footnote`, `text-caption`.
+
+Safe areas: `pt-safe`, `pb-safe`, `px-safe` (padding that clears the notch / status bar / home
+indicator, never less than the normal margin). `max-w-app` = the 430px phone column.
+
 ## Page shell
 
 ```tsx
-<div className="min-h-screen bg-bg text-text font-body">
+<div className="mx-auto flex w-full max-w-app flex-1 flex-col pt-[env(safe-area-inset-top)]">
   <Nav />
-  <main className="mx-auto max-w-[1180px] px-4 py-6 flex flex-col gap-6">{children}</main>
+  <main className="flex flex-1 flex-col gap-6 px-safe pt-6 pb-safe">{children}</main>
 </div>
 ```
 
@@ -155,12 +168,8 @@ fill: `h-full rounded-full bg-accent` with an inline `width` percentage.
 <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
 ```
 
-## Fonts (src/app/layout.tsx)
+## Fonts
 
-```ts
-import { Barlow, Barlow_Condensed } from "next/font/google";
-const barlow = Barlow({ subsets: ["latin"], weight: ["400","500","600"], variable: "--font-barlow" });
-const barlowCondensed = Barlow_Condensed({ subsets: ["latin"], weight: ["500","600","700"], variable: "--font-barlow-condensed" });
-```
-
-Apply both variables on `<html>`, and set `viewport.themeColor` to `#16171a`.
+Apple's system font via `font-sans` (the default on `body`); no font files are loaded.
+`font-heading` / `font-body` are old names for the same font, kept until screens are rebuilt.
+`viewport.themeColor` in `src/app/layout.tsx` lists one color per mode, matching `--color-bg`.

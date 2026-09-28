@@ -7,9 +7,8 @@
 
 export const buttonPrimary =
   "inline-flex items-center justify-center gap-1.5 rounded-control px-3 py-2 font-heading font-semibold text-sm " +
-  "bg-accent text-bg border border-accent transition-colors duration-150 " +
-  "hover:bg-[var(--color-accent-300)] hover:border-[var(--color-accent-300)] " +
-  "active:bg-[var(--color-accent-500)] disabled:opacity-45";
+  "bg-accent text-on-accent border border-accent transition-opacity duration-150 " +
+  "active:opacity-60 disabled:opacity-45";
 
 export const buttonSecondary =
   "inline-flex items-center justify-center gap-1.5 rounded-control px-3 py-2 font-heading font-semibold text-sm " +
@@ -23,9 +22,11 @@ export const buttonGhost =
   "hover:bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)] disabled:opacity-45";
 
 // No width utility baked in -- most inputs want `w-full`, but the inline
-// per-row category select doesn't, so callers add it themselves.
+// per-row category select doesn't, so callers add it themselves. Text is
+// 17px (text-body): anything under 16px makes iPhone Safari zoom the whole
+// page in when the field is tapped.
 export const inputBase =
-  "min-h-9 px-2.5 py-1.5 text-sm rounded-control text-text caret-[var(--color-accent)] " +
+  "min-h-11 px-2.5 py-1.5 text-body rounded-control text-text caret-[var(--color-accent)] " +
   "bg-[color-mix(in_srgb,var(--color-text)_5%,transparent)] border border-divider " +
   "transition-colors duration-150 " +
   "placeholder:text-[color-mix(in_srgb,var(--color-text)_40%,transparent)] " +

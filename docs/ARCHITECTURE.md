@@ -17,7 +17,7 @@ explained the first time they show up.
 |----------------|----------------------------------|
 | Language       | TypeScript (JavaScript with type-checking added — catches whole categories of bugs before the code even runs), used for both the browser-facing code and the server code |
 | Framework      | Next.js — a toolkit that handles both the pages you see and the backend logic in one project, so there's no separate "frontend app" and "backend app" to keep in sync |
-| Styling        | Tailwind CSS — write styling directly as class names on elements instead of separate `.css` files. UI must follow the design system in `docs/design-system.md`/`docs/design/` (tokens live in `src/app/globals.css`) |
+| Styling        | Tailwind CSS — write styling directly as class names on elements instead of separate `.css` files. UI must follow the design system in `docs/design-system.md`/`docs/design/` (tokens live in `src/app/globals.css`, each with a Light and a Dark value that follows the phone's setting) |
 | Database       | PostgreSQL (Postgres for short) — where all persistent data (transactions, categories, etc.) is stored |
 | ORM            | Drizzle — a library that lets us describe and query the database using TypeScript instead of writing raw SQL by hand ("ORM" = Object-Relational Mapper, the general name for this kind of tool) |
 | Auth           | Auth.js (NextAuth) — a login/session library, using email+password and encrypted-cookie ("JWT") sessions |
@@ -34,10 +34,10 @@ See [DECISIONS.md](DECISIONS.md) for the reasoning behind each of these.
 JHub/
 ├── src/
 │   ├── app/                     Next.js's routing system: each folder here becomes a URL
-│   │   ├── layout.tsx            the root page shell every page renders inside (fonts, page title, registers the service worker below)
+│   │   ├── layout.tsx            the root page shell every page renders inside (page title, iPhone Home Screen settings, edge-to-edge `viewportFit: "cover"`, per-mode status-bar colors, registers the service worker below). Uses Apple's system font, so nothing is downloaded
 │   │   ├── manifest.ts            describes the app for "install as an app" purposes, auto-served at /manifest.webmanifest
 │   │   ├── (app)/                a "route group" -- the "(app)" folder name is invisible in the URL, it exists only so these pages can share one extra layout.tsx (the top Nav bar) without login/signup getting it too
-│   │   │   ├── layout.tsx          adds the shared Nav bar + page-width content wrapper around every page below
+│   │   │   ├── layout.tsx          adds the shared Nav bar + content wrapper around every page below, as one centered phone-width column (430px max) with safe-area padding for the notch and home indicator
 │   │   │   ├── page.tsx             the Overview screen, served at "/": lists only unsorted transactions (categoryId IS NULL), newest first, each with an inline category dropdown; shows a "no bank connected" or "all caught up" message when the list is empty, and a pointer to Categories when there are unsorted transactions but you have no categories yet
 │   │   │   ├── categories/
 │   │   │   │   ├── page.tsx          the Categories list, served at "/categories": a "+ New category" card first (a `NewCategoryCard` -- the only place categories get created), then one card per category (a `CategoryCard`) with its transaction count, linking to its detail page, plus inline Rename and Delete
@@ -122,7 +122,14 @@ Tailwind class-name strings importable from either kind).
 "PWA" stands for Progressive Web App — a website that can be installed like a real app (icon on your
 home screen, opens in its own window, works partly offline).
 - `src/app/manifest.ts` — tells the browser what to call the app and which icon/colors to use when
-  it's installed.
+  it's installed. Its colors can't vary by Light/Dark, so they use the Light background; on an
+  iPhone, the per-mode `themeColor` and the `appleWebApp` settings in `src/app/layout.tsx` are
+  what count.
+- `src/app/globals.css` also holds the iPhone basics that apply to every page: the `pt-safe` /
+  `pb-safe` / `px-safe` padding helpers (they keep content out from under the notch, status bar and
+  home indicator, using the `env(safe-area-inset-*)` values the browser reports), no gray tap
+  flash, no double-tap zoom, and 17px text in inputs (under 16px makes iPhone Safari zoom in when
+  a field is tapped).
 - `public/sw.js` — the "service worker": a small script the browser keeps running in the background,
   separate from any open tab, even after you close the app. This is what makes offline behavior and
   push notifications possible — without it, neither would work. It's registered (turned on) by

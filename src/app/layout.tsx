@@ -1,25 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Barlow, Barlow_Condensed } from "next/font/google";
 import "./globals.css";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 import { AuthSessionProvider } from "@/components/auth-session-provider";
-
-// Barlow/Barlow Condensed are this app's design-system fonts (see
-// docs/design-system.md): Barlow for body copy, Barlow Condensed for
-// headings and anything numeric/large. next/font/google downloads and
-// self-hosts them at build time, so the browser never makes a separate
-// request to Google's servers to load them.
-const barlow = Barlow({
-  variable: "--font-barlow",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-});
-
-const barlowCondensed = Barlow_Condensed({
-  variable: "--font-barlow-condensed",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-});
 
 // Page-wide info like the title shown in the browser tab, and settings for
 // how the app behaves when installed.
@@ -35,26 +17,45 @@ export const metadata: Metadata = {
     // set separately here.
     apple: "/icons/apple-touch-icon.png",
   },
+  // iPhone-specific settings for when JHub is opened from the Home Screen:
+  // run full-screen like an app, use "JHub" as the name under the icon, and
+  // how to draw the status bar (clock/battery strip). "default" gives the
+  // status bar its own solid strip above the app, so no content ever sits
+  // underneath it.
+  appleWebApp: {
+    capable: true,
+    title: "JHub",
+    statusBarStyle: "default",
+  },
 };
 
-// This next.js version requires theme color to live in its own `viewport`
-// export rather than inside `metadata` above. It colors the browser/phone UI
-// (like the status bar) that surrounds the page. #16171a is the design
-// system's dark ground (docs/design-system.md) -- there's no light mode, so
-// this never needs to change per theme.
+// This next.js version requires these in their own `viewport` export rather
+// than inside `metadata` above.
 export const viewport: Viewport = {
-  themeColor: "#16171a",
+  // "cover" lets the app draw all the way to the screen's edges, including
+  // around the iPhone's notch and home indicator. The pt-safe / pb-safe /
+  // px-safe helpers in globals.css then pad content back out of those areas.
+  viewportFit: "cover",
+  // The page supports both Light and Dark (matches globals.css), so the
+  // browser can pick the right colors for its own controls before the
+  // stylesheet has even loaded.
+  colorScheme: "light dark",
+  // Colors the browser/phone UI around the page (like the status bar) to
+  // match the app's background in each mode. These have to be literal
+  // values -- they can't read the CSS variables in globals.css -- so they
+  // must be kept in sync with --color-bg there by hand.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f2f2f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+  ],
 };
 
 // The shared page shell every single page in the app renders inside --
-// fonts, the <html>/<body> tags, and the service worker registration below
-// all live here once instead of being repeated on every page.
+// the <html>/<body> tags and the service worker registration below all live
+// here once instead of being repeated on every page.
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${barlow.variable} ${barlowCondensed.variable} h-full antialiased`}
-    >
+    <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         <AuthSessionProvider>
           <ServiceWorkerRegistration />

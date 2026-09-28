@@ -15,8 +15,12 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Personal productivity hub",
     start_url: "/",
     display: "standalone", // hides the browser's address bar/tabs so it looks like a real app, not a website
-    background_color: "#0f172a", // shown briefly as a loading-screen background right when the app opens
-    theme_color: "#0f172a", // colors the surrounding phone/browser UI (like the status bar) to match the app
+    // The manifest can only hold one color each, not a Light and a Dark
+    // version, so these use the Light-mode background (--color-bg in
+    // globals.css). On an iPhone the viewport's per-mode themeColor
+    // (src/app/layout.tsx) is what matters; these mostly affect Android.
+    background_color: "#f2f2f7", // shown briefly as a loading-screen background right when the app opens
+    theme_color: "#f2f2f7", // colors the surrounding phone/browser UI (like the status bar) to match the app
     icons: [
       {
         src: "/icons/icon-192.png",

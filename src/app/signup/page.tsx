@@ -43,7 +43,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-sm flex-1 flex-col justify-center px-6">
+    <div className="mx-auto flex w-full max-w-app flex-1 flex-col justify-center px-safe pt-safe pb-safe">
       <h1 className="font-heading text-[32px]">Sign up</h1>
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
         <div>
@@ -87,7 +87,7 @@ export default function SignupPage() {
       </form>
       <p className={`mt-4 text-sm ${bodyText65}`}>
         Already have an account?{" "}
-        <Link href="/login" className="text-accent hover:text-[var(--color-accent-300)]">
+        <Link href="/login" className="text-accent active:opacity-60">
           Log in
         </Link>
       </p>

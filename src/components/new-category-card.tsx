@@ -82,7 +82,7 @@ export function NewCategoryCard() {
         disabled={isPending}
         className={inputBase}
       />
-      {error && <span className="text-xs text-red-400">{error}</span>}
+      {error && <span className="text-xs text-red">{error}</span>}
       <div className="flex gap-2">
         <button type="submit" disabled={isPending} className={buttonPrimary}>
           {isPending ? "Saving..." : "Save"}

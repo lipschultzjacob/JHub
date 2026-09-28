@@ -98,7 +98,7 @@ export function CategoryCard({
               : `Its ${total} transactions will go back to unsorted.`}
           </span>
         )}
-        {error && <span className="text-xs text-red-400">{error}</span>}
+        {error && <span className="text-xs text-red">{error}</span>}
         <div className="flex gap-2">
           <button
             type="button"
@@ -138,7 +138,7 @@ export function CategoryCard({
           disabled={isPending}
           className={inputBase}
         />
-        {error && <span className="text-xs text-red-400">{error}</span>}
+        {error && <span className="text-xs text-red">{error}</span>}
         <div className="flex gap-2">
           <button type="submit" disabled={isPending} className={buttonPrimary}>
             {isPending ? "Saving..." : "Save"}
