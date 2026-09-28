@@ -131,4 +131,6 @@ decisions get resolved). See `docs/agents/domain.md`.
 - Don't make architecture or design decisions unilaterally — this is a long-lived personal project
   the user intends to keep extending, and they've asked to be consulted on choices with real
   tradeoffs rather than have them decided silently.
+- JHub is designed as an **iPhone app**; the desktop/web version is only for development. Judge every
+  UI change on an iPhone screen (see docs/design-system.md, "Platform: an iPhone app").
 - UI work must follow docs/design-system.md. Read it before adding or changing any screen. The full per-screen spec and Tailwind recipes are in docs/design/.

@@ -576,3 +576,30 @@ time. Opening Settings on a subscribed device also re-sends its subscription to 
 small extra request) so "on" stays truthful even if the row was lost. Other issue #19 scope note: the
 issue said no unsubscribe route existed, but `DELETE /api/push/subscribe` already did -- it just had
 no caller, and is reused as-is.
+
+---
+
+## 2026-09-28 — UI overhaul: design as an iOS-native iPhone app
+
+**Decision:** JHub is designed as an iPhone app (installed to the Home Screen). The desktop/web
+version is only for development. The visual direction moves from the Industry-derived look (dark
+only, Barlow fonts, bordered cards, one accent and no other color) to an iOS-native one:
+- Apple's system font, grouped inset lists, large titles, a bottom tab bar, sheets and swipe
+  actions.
+- It follows the phone's Light/Dark setting.
+- JHub's steel blue stays as the one tint. Green marks money coming in, and red marks destructive
+  actions.
+- The iOS pieces are hand-built with Tailwind rather than taken from a UI library.
+
+The full rules are in `docs/design-system.md`. The work is split into one GitHub issue per piece
+and done one at a time.
+
+**Why:** The app is used almost entirely on an iPhone. Matching built-in Apple apps makes it feel at
+home there and gives a well-documented standard (Apple's Human Interface Guidelines) to follow
+instead of inventing patterns. Hand-building avoids a new dependency and keeps full control, at the
+cost of more work on the parts that have to feel right (sheets, swipe-to-delete).
+
+**Tradeoff:** Every color now needs a light and a dark value. Barlow and most of the old
+recipes (`src/components/recipes.ts`, `docs/design/components.md`) will be replaced. Desktop gets
+no layout of its own, just a centered phone-width column. Apple's SF Symbols icons can't be used on
+the web, so tab and row icons come from Lucide, a new dependency and the closest free match.
