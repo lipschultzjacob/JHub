@@ -6,6 +6,7 @@ import { PlaidLinkButton } from "@/components/plaid-link-button";
 import { SyncButton } from "@/components/sync-button";
 import { DisconnectBankButton } from "@/components/disconnect-bank-button";
 import { SignOutButton } from "@/components/sign-out-button";
+import { PushToggle } from "@/components/push-toggle";
 import { card, bodyText65, metaText45 } from "@/components/recipes";
 
 // Re-run the query on every visit so a newly connected or disconnected bank
@@ -13,7 +14,7 @@ import { card, bodyText65, metaText45 } from "@/components/recipes";
 export const dynamic = "force-dynamic";
 
 // The Settings screen ("/settings"): manage connected banks (connect,
-// sync, disconnect) and sign out. A "Server Component" (see ARCHITECTURE.md)
+// sync, disconnect), turn notifications on/off for this device, and sign out. A "Server Component" (see ARCHITECTURE.md)
 // that queries the database directly; the buttons are the browser-side parts.
 // The proxy (src/proxy.ts) already guarantees you're logged in.
 export default async function SettingsPage() {
@@ -70,6 +71,11 @@ export default async function SettingsPage() {
           <PlaidLinkButton />
           {items.length > 0 && <SyncButton />}
         </div>
+      </section>
+
+      <section className={card}>
+        <h4>Notifications</h4>
+        <PushToggle />
       </section>
 
       <section className={card}>

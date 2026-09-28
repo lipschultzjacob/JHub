@@ -7,7 +7,7 @@ import { auth } from "@/auth";
 // Saves a browser's push subscription so we can send it notifications
 // later. Called by the browser right after it grants notification
 // permission and Web Push hands back the subscription details (see
-// src/components/push-subscribe-button.tsx).
+// src/lib/push-client.ts).
 export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user) {
@@ -38,7 +38,8 @@ export async function POST(request: Request) {
   return NextResponse.json({ success: true });
 }
 
-// Removes a subscription -- called when notifications get turned off.
+// Removes a subscription -- called when notifications get turned off on a
+// device, either from the Notifications card on Settings or by signing out.
 export async function DELETE(request: Request) {
   const session = await auth();
   if (!session?.user) {

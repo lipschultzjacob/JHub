@@ -43,7 +43,7 @@ JHub/
 │   │   │   │   ├── page.tsx          the Categories list, served at "/categories": a "+ New category" card first (a `NewCategoryCard` -- the only place categories get created), then one card per category (a `CategoryCard`) with its transaction count, linking to its detail page, plus inline Rename and Delete
 │   │   │   │   └── [id]/page.tsx     one category's detail page ("/categories/3"): verifies the category belongs to the signed-in user (else 404), then lists its transactions with a dropdown to re-sort each
 │   │   │   └── settings/
-│   │   │       └── page.tsx          the Settings screen, served at "/settings": connected-banks list (with per-bank Disconnect), connect-another and sync buttons, and Sign out
+│   │   │       └── page.tsx          the Settings screen, served at "/settings": connected-banks list (with per-bank Disconnect), connect-another and sync buttons, a Notifications card (on/off for this device), and Sign out
 │   │   ├── login/page.tsx          the login form (outside the "(app)" group -- no Nav bar, per the design system)
 │   │   ├── signup/page.tsx         the create-account form (same)
 │   │   └── api/                  backend endpoints the frontend calls (no separate backend project needed)
@@ -68,11 +68,11 @@ JHub/
 │   │   ├── nav-links.tsx          the nav's page links, split out as a Client Component since only the browser knows the current URL (to mark the active link)
 │   │   ├── recipes.ts             shared Tailwind class-name strings (buttons, inputs, cards) from the design system, so components don't each repeat -- or drift out of sync with -- the same long class string. Not a component; plain exported strings
 │   │   ├── transaction-row.tsx    one transaction in a list (merchant, date/account, amount, category dropdown); a Server Component shared by Overview and the category detail page
-│   │   ├── sign-out-button.tsx    shown on the Settings screen
+│   │   ├── sign-out-button.tsx    shown on the Settings screen; turns off push notifications on this device before signing out
 │   │   ├── disconnect-bank-button.tsx  the per-bank Disconnect button on Settings: confirm popup, calls DELETE /api/plaid/items/[id], then refreshes
 │   │   ├── plaid-link-button.tsx
 │   │   ├── sync-button.tsx
-│   │   ├── push-subscribe-button.tsx  turns on push notifications for this browser
+│   │   ├── push-toggle.tsx        the Notifications card's body on Settings: says whether notifications are on for this device, with a Turn on / Turn off button (or a message if this browser can't do push, has blocked it, or is the dev build)
 │   │   ├── category-card.tsx      one card on the Categories list: name link + count, with an inline Rename (text box, Save/Cancel; calls PATCH /api/categories/[id]) and an inline Delete confirmation ("Delete X? N transactions will go back to unsorted"; calls DELETE /api/categories/[id])
 │   │   ├── new-category-card.tsx  the "+ New category" card at the start of the Categories list: opens a name box with Save/Cancel; calls POST /api/categories
 │   │   └── category-select.tsx
@@ -84,6 +84,7 @@ JHub/
 │   │   ├── plaid-sync.ts          the actual "fetch new transactions and save them" logic, shared by the manual sync button and the webhook
 │   │   ├── plaid-webhook-verify.ts confirms an incoming webhook request genuinely came from Plaid
 │   │   ├── web-push.ts            sends a push notification to one saved subscription
+│   │   ├── push-client.ts         browser-only helpers to turn this device's push notifications on/off (permission prompt, Web Push subscribe/unsubscribe, saving to /api/push/subscribe); used by push-toggle.tsx and sign-out-button.tsx
 │   │   ├── category-name.ts       server-only naming rules shared by category create and rename: trim + length check, and the case-insensitive "you already have that name" check
 │   │   ├── crypto.ts              encrypts/decrypts the Plaid access_token before it's stored (see Database below)
 │   │   └── rate-limit.ts          blocks repeated login/signup attempts past a threshold (see Login below)
@@ -236,11 +237,18 @@ The actual "notify me the moment I spend money" feature. Three pieces:
    a connection can silently end up with no webhook attached depending on exactly how it was
    created, with no error at connect time; it only shows up later as "notifications never arrive."
    Calling it again here is harmless if it was already set correctly.
-2. **Subscribing this browser.** Clicking "Enable notifications" (`PushSubscribeButton`) asks the
-   browser for notification permission, then uses the browser's own Web Push API to create a
-   subscription (an address + two encryption keys unique to this browser). That gets saved via
+2. **Subscribing this browser.** The Notifications card on Settings (`PushToggle`, using the
+   helpers in `src/lib/push-client.ts`) controls this device only. "Turn on" asks the browser for
+   notification permission, then uses the browser's own Web Push API to create a subscription (an
+   address + two encryption keys unique to this browser). That gets saved via
    `POST /api/push/subscribe` into `push_subscriptions`. Someone can have several of these (phone,
-   laptop, ...) since each browser subscribes independently.
+   laptop, ...) since each browser subscribes independently. Opening Settings on an
+   already-subscribed device quietly re-saves its subscription, so the server's record comes back
+   if it was ever lost. "Turn off" unsubscribes in the browser first, then removes the row via
+   `DELETE /api/push/subscribe`; if that removal fails, the leftover row is harmless, because the
+   next notification sent to it bounces (404/410) and step 3 deletes it. Signing out runs the same
+   "turn off" first, so a signed-out browser stops receiving your notifications. The toggle only
+   works in the production build -- in development there's no service worker (see above).
 3. **Sending the notification.** When Plaid calls `POST /api/plaid/webhook`, that route first checks
    the request is genuinely from Plaid (`src/lib/plaid-webhook-verify.ts` verifies a signed token
    Plaid attaches to every webhook -- without this, anyone who found the URL could fake a "new
@@ -309,10 +317,7 @@ financial data now.
   categorize instead -- see "Push notifications" above)
 - Any other planned productivity-hub features beyond the financial tracking (the to-do list was
   dropped -- see DECISIONS.md)
-- Password change, email change, account deletion (Settings only has bank management + sign-out)
-- A notification on/off toggle -- `push-subscribe-button.tsx` has no home since the Transactions
-  page was removed (issue #17), so a new browser can't currently subscribe to push notifications
-  until issue #19 lands. Already-subscribed browsers keep receiving them.
+- Password change, email change, account deletion (Settings only has bank management, the notifications toggle, and sign-out)
 - Any way to reset a forgotten password (there's no "forgot password" email flow yet -- losing your
   password currently means losing access)
 - Bank connections made before this webhook-confirmation step existed don't get fixed

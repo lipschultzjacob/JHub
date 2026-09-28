@@ -550,3 +550,29 @@ null" rule on `transactions.category_id` sends them back to unsorted on Overview
 says how many. A brand-new account can't sort anything until it creates a category, so Overview
 shows a pointer to Categories in that case. New categories get no color (`categories.color` stays
 null) -- no screen displays color yet, so picking one is left to a future recolor feature.
+
+---
+
+## 2026-09-28 — Notifications toggle on Settings; signing out turns notifications off (issue #19)
+
+**Decision:** Settings gets a "Notifications" card (`PushToggle`) with a status line and one Turn on
+/ Turn off button. It controls **this device only**; there's no list of your other subscribed
+devices. **Signing out also turns notifications off on that device** before ending the session.
+
+**Why:** A per-device toggle matches how Web Push actually works (each browser subscribes on its own)
+and avoids guessing device names from browser details for a device list. Unsubscribing on sign-out
+means a signed-out browser (a shared or borrowed computer, say) never keeps showing notifications
+about your transactions. It runs *before* the sign-out itself, because removing the server's record
+needs a signed-in request.
+
+**Turn-off order:** Unsubscribe in the browser first, then delete the server row. Doing it that way
+round means a failure partway is self-healing: the browser subscription is already dead, so the next
+push to the leftover row bounces with 404/410 and the Plaid webhook deletes it. Doing it the other
+way round could leave a live browser subscription with no server record, showing "on" while
+nothing arrives. A failure never blocks signing out.
+
+**Tradeoff:** Signing out and back in on your own phone means turning notifications back on each
+time. Opening Settings on a subscribed device also re-sends its subscription to the server (one
+small extra request) so "on" stays truthful even if the row was lost. Other issue #19 scope note: the
+issue said no unsubscribe route existed, but `DELETE /api/push/subscribe` already did -- it just had
+no caller, and is reused as-is.
