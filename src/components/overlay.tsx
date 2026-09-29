@@ -1,15 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
-// Shared plumbing for things that slide up over the whole screen: the Sheet
-// (sheet.tsx) and the confirmation ActionSheet (action-sheet.tsx). Nothing
-// here draws anything app-specific.
+// Shared plumbing for things that appear over the whole screen: the Sheet
+// (sheet.tsx) and the "are you sure?" ConfirmAlert (confirm-alert.tsx).
+// Nothing here draws anything app-specific.
 
-// How long the slide in/out takes. Must match the duration-300 class used
-// by Sheet and ActionSheet.
+// How long an overlay stays on the page after closing, so its exit
+// animation can finish. At least as long as the longest exit animation.
 export const OVERLAY_DURATION_MS = 300;
+
+// True when the phone's "Reduce Motion" accessibility setting is on, in
+// which case overlays fade instead of sliding. Read straight from the
+// browser (and kept up to date if the setting changes).
+export function usePrefersReducedMotion() {
+  return useSyncExternalStore(
+    (onChange) => {
+      const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+      query.addEventListener("change", onChange);
+      return () => query.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false // on the server there's no setting to read
+  );
+}
 
 // Keeps an overlay on screen long enough to animate out. Returns `mounted`
 // (whether to render it at all) and `visible` (whether it's in its "shown"

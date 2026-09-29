@@ -64,7 +64,7 @@ const toneClass = {
 // The thin line between rows, starting at the text's left edge as in iOS.
 // Drawn as a 0.5px *border* on an "::after" overlay (a 0.5px-tall box would
 // vanish -- see docs/DECISIONS.md), on every row except the section's last.
-// Exported so SwipeRow can put it on its own wrapper around a row.
+// Exported so SwipeToDelete can put it on its own wrapper around a row.
 export const rowSeparatorClass =
   "not-last:after:absolute not-last:after:right-0 not-last:after:bottom-0 not-last:after:left-(--gutter) " +
   "not-last:after:h-0 not-last:after:border-b-[0.5px] not-last:after:border-separator";

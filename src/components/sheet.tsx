@@ -7,6 +7,7 @@ import {
   useScrollLock,
   useEscape,
   useKeyboardInset,
+  usePrefersReducedMotion,
 } from "@/components/overlay";
 
 // A stand-in text box used by primeKeyboard below, and the element that had
@@ -70,6 +71,7 @@ export function Sheet({
 }) {
   const { mounted, visible } = usePresence(open);
   const keyboardInset = useKeyboardInset(open);
+  const reducedMotion = usePrefersReducedMotion();
   const panelRef = useRef<HTMLFormElement>(null);
   const titleId = useId();
   useScrollLock(open);
@@ -105,7 +107,8 @@ export function Sheet({
         <div
           aria-hidden
           onClick={onCancel}
-          className={`absolute inset-0 bg-dim transition-opacity duration-300 ${visible ? "opacity-100" : "opacity-0"}`}
+          className="absolute inset-0 bg-dim"
+          style={{ opacity: visible ? 1 : 0, transition: "opacity 300ms" }}
         />
         <form
           ref={panelRef}
@@ -117,16 +120,20 @@ export function Sheet({
             e.preventDefault(); // Enter in a text box saves, like tapping Save
             if (!saveDisabled && !saving) onSave();
           }}
-          // Sits above the keyboard. Also swaps in the "elevated" colors
-          // (see globals.css) so list sections inside use them too --
-          // that's what keeps the sheet visible against a black screen.
+          // Sits above the keyboard, and slides up from below the screen
+          // (or just fades, with Reduce Motion on). The animation uses plain
+          // inline styles so it behaves the same on every iOS version. Also
+          // swaps in the "elevated" colors (see globals.css) so list
+          // sections inside use them too -- that's what keeps the sheet
+          // visible against a black screen.
           style={{
             bottom: keyboardInset,
+            transform: visible || reducedMotion ? "translateY(0)" : "translateY(100%)",
+            opacity: visible || !reducedMotion ? 1 : 0,
+            transition: "transform 300ms cubic-bezier(0.32, 0.72, 0, 1), opacity 300ms",
             ["--color-surface" as string]: "var(--color-surface-elevated)",
           }}
-          className={`absolute inset-x-0 mx-auto flex max-h-[90dvh] w-full max-w-app flex-col rounded-t-[10px] bg-bg-elevated pb-safe outline-none transition duration-300 ease-ios motion-reduce:translate-y-0 ${
-            visible ? "translate-y-0 opacity-100" : "translate-y-full motion-reduce:opacity-0"
-          }`}
+          className="absolute inset-x-0 mx-auto flex max-h-[90dvh] w-full max-w-app flex-col rounded-t-[10px] bg-bg-elevated pb-safe outline-none"
         >
           {/* The grabber: the small pill at the top that marks this as a sheet. */}
           <div aria-hidden className="mx-auto mt-1.5 h-[5px] w-9 rounded-full bg-separator" />

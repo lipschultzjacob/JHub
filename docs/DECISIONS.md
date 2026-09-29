@@ -622,3 +622,27 @@ old 0.85x spacing steps (`p-4` = 13.6px, `gap-6` = 20.4px) put content on fracti
 which makes thin lines flicker in and out. New iOS code uses whole-pixel tokens (`--gutter`,
 `--edge`, `--section-gap`) instead. Positioning classes don't accept custom spacing names
 (`left-gutter` generated nothing), so the variable form `left-(--gutter)` is used.
+
+---
+
+## 2026-09-29 — Swipe-to-delete redesigned after iPhone testing; test UI in WebKit, not Chrome (issue #23)
+
+**What happened:** The first swipe-to-delete passed every automated check in headless Chrome, but on
+a real iPhone it was broken. There was blank space above each row, and "Delete" appeared above the
+row name instead of behind it. The confirmation panel was squished, and the full swipe took too
+far a pull. The cause was the design itself, a hidden absolutely-positioned layer toggled with
+`visibility`. Chrome, the engine the checks ran in, isn't the engine iPhones use: every iPhone
+browser runs WebKit.
+
+**Decisions:**
+- **The swipe was rebuilt to what was actually wanted:** a red panel with a trash can grows in
+  with the swipe; letting go past a short threshold (30% of the row, 80–140px) asks "are you
+  sure?"; there's no resting open state and no separate Delete button to tap. The panel sits
+  beside the row in a single sliding flex strip, and the moving parts use inline styles instead of
+  utility classes, so there's no hidden layer to misbehave.
+- **The confirmation is a centered iOS alert** (`ConfirmAlert`) instead of the bottom action
+  sheet, which was removed.
+- **UI checks now run in WebKit** via Playwright (`webkit` + the `iPhone 14` device profile) rather
+  than headless Chrome. It's Safari's engine, so it catches Safari-specific layout differences.
+  It's still not a real iPhone (touch feel, the keyboard, and older iOS versions can differ), so
+  the final check stays on the device.

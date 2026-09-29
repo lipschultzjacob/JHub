@@ -96,37 +96,41 @@ that's built in the Categories issue.
 ```tsx
 <ListSection>
   {categories.map((c) => (
-    <SwipeRow key={c.id} actions={[{ label: "Delete", onPress: () => setConfirming(c) }]}>
+    <SwipeToDelete key={c.id} onDelete={() => setConfirming(c)} held={confirming?.id === c.id}>
       <ListRow title={c.name} value={c.count} chevron href={`/categories/${c.id}`} />
-    </SwipeRow>
+    </SwipeToDelete>
   ))}
 </ListSection>
+<ConfirmAlert open={confirming !== null} title={`Delete ${confirming?.name}?`}
+  message="Are you sure? Its 12 transactions will go back to unsorted."
+  confirmLabel="Delete" onConfirm={reallyDelete} onCancel={() => setConfirming(null)} />
 ```
 
-- Wraps one `ListRow`. The wrapper carries the row separator (`rowSeparatorClass`, exported from
-  grouped-list.tsx), since the row inside it is always its wrapper's last child.
-- Drag left: it follows the finger, then settles open (80px per action) if let go past halfway,
-  otherwise closed. A **full swipe** (past 60% of the row's width) runs the first action directly.
-  Only one row is open at a time, and touching anywhere else closes it.
-- `touch-pan-y`: up/down movement stays a normal page scroll. A drag only counts as a swipe once
-  it's clearly sideways (8px, more horizontal than vertical).
-- The click that ends a swipe is swallowed, so the row's link doesn't fire. A tap on an open row
-  just closes it.
-- Actions are red (`bg-red text-white`) and stay invisible while the row is closed, so no red
-  peeks out at rounded corners. There's deliberately no non-swipe way to reach them (decided on
-  #23).
+- Swiping left grows a **red panel with a white trash can** (Lucide Trash2) in from the right. The
+  icon grows as you pull, and turns fully solid once letting go would delete.
+- The **threshold** is 30% of the row's width, clamped to 80–140px. Letting go past it calls
+  `onDelete` (normally opening the ConfirmAlert). Letting go before it springs the row back.
+- While `held` is true (the alert is up), the row stays pulled open with the red showing. When
+  `held` turns false (Cancel), it springs back.
+- **Layout is deliberately plain:** the row and the red panel sit side by side in one flex strip
+  that slides with `transform`. The panel's width equals how far the row has moved. There's no
+  absolutely-positioned hidden layer, and the moving parts use inline styles, not utility
+  classes. (The first version used a hidden absolute layer, and on a real iPhone it showed up as
+  blank space above each row.)
+- `touch-action: pan-y` keeps up/down movement a normal page scroll. A drag only counts as a
+  swipe once it's clearly sideways and leftward. The long-press link preview is off, and a click
+  the browser sends at the end of a swipe is swallowed (the flag resets on every new touch, since
+  phones usually don't send that click at all).
+- The wrapper carries the row separator (`rowSeparatorClass`). There's deliberately no non-swipe
+  way to delete (decided on #23).
 
-## Confirmation panel ("action sheet") — `src/components/action-sheet.tsx`
+## "Are you sure?" alert — `src/components/confirm-alert.tsx`
 
-```tsx
-<ActionSheet open={confirming !== null} message="Its 12 transactions will go back to unsorted."
-  confirmLabel="Delete Category" onConfirm={reallyDelete} onCancel={() => setConfirming(null)} />
-```
-
-It's pinned to the bottom, `max-w-app`, `px-2`, over a `bg-dim` backdrop (tapping the backdrop
-cancels). It has two `rounded-[14px] bg-surface` groups: the optional message (`text-footnote
-text-text-secondary`, centered) over the red confirm button, then a separate bold tinted Cancel.
-Buttons are `min-h-14 text-[20px]`. Keyboard focus starts on Cancel.
+This is a centered iOS alert: a 270px box, `rounded-[14px] bg-surface-elevated`, over `bg-dim`.
+It has a Headline title, a Footnote message, then Cancel (semibold tint) and the red confirm
+button side by side, separated by 0.5px borders. It pops in from 110% scale with a fade (inline
+styles). Tapping the dimmed area does nothing (as in iOS); Escape cancels. It keeps showing its
+last title/message while fading out, so clearing the caller's state doesn't blank it mid-fade.
 
 ## Sheet — `src/components/sheet.tsx`
 
@@ -151,10 +155,10 @@ Buttons are `min-h-14 text-[20px]`. Keyboard focus starts on Cancel.
   then moves focus to its first field.
 - No drag-down-to-dismiss yet; Cancel, tapping the backdrop, or Escape close it.
 
-Shared overlay plumbing (appear/disappear timing, scroll lock, Escape, keyboard inset, and a
-`Portal` that renders into `<body>` so a swiped row's transform can't drag an overlay along) lives
-in `src/components/overlay.tsx`. Both sheets honor `prefers-reduced-motion`: they fade instead of
-sliding.
+Shared overlay plumbing lives in `src/components/overlay.tsx`: appear/disappear timing, scroll lock,
+Escape, keyboard inset, `usePrefersReducedMotion` (the Sheet fades instead of sliding when Reduce
+Motion is on), and a `Portal` that renders into `<body>` so a swiped row's transform can't drag an
+overlay along.
 
 ## Card
 
