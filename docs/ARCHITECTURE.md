@@ -286,6 +286,7 @@ never committed to git), so things like passwords aren't stored in the codebase 
 | `ENCRYPTION_KEY` | Used to encrypt the Plaid `access_token` before it's stored in the database (`src/lib/crypto.ts`) -- a separate key from `AUTH_SECRET`, never reused |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Web Push credentials -- prove notifications from this app are genuinely from this app. The public key is safe for the browser to see (hence `NEXT_PUBLIC_`); the private key is not |
 | `APP_URL` | This app's real public web address, e.g. `https://j-hub-lippy-industries.vercel.app`. Used to tell Plaid where to send webhooks. Unset locally, since local dev has no public address for Plaid to reach |
+| `DEV_ALLOWED_ORIGINS` | Development only. This computer's Wi-Fi address (e.g. `10.11.174.75`, comma-separate several), read by `next.config.ts`'s `allowedDevOrigins` so an iPhone on the same Wi-Fi can use the dev server at `http://<that address>:3000`. Without it, the dev server blocks the page's JavaScript for any address but localhost, so pages load but forms just reload. Changes with your network; never set in production |
 
 See `.env.example` for the template; real values go in `.env.local` (which is excluded from git).
 Production values for these same variables live in Vercel's project settings instead, added via

@@ -10,6 +10,17 @@ const nextConfig: NextConfig = {
     // from an old, unrelated project on this computer).
     root: __dirname,
   },
+  // Lets another device (your iPhone, on the same Wi-Fi) use the dev server
+  // at this computer's network address, e.g. http://10.11.174.75:3000.
+  // Without it, the dev server refuses to send the page's JavaScript to any
+  // address other than localhost -- a dev-only safety block -- so pages load
+  // but nothing on them works (forms just reload). Development only; it has
+  // no effect on the production build. The address lives in .env.local
+  // (DEV_ALLOWED_ORIGINS, comma-separated) rather than here, since it's
+  // specific to your network and changes when that does.
+  allowedDevOrigins: process.env.DEV_ALLOWED_ORIGINS?.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   // Extra response headers applied to every page, mainly as protection
   // against "clickjacking" -- a trick where another site embeds this app in
   // a hidden iframe and tricks you into clicking something you didn't mean
