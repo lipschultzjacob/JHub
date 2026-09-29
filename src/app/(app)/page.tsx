@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { transactions, plaidAccounts, plaidItems, categories } from "@/db/schema";
 import { auth } from "@/auth";
 import { TransactionRow } from "@/components/transaction-row";
+import { LargeTitle } from "@/components/large-title";
 import { card, bodyText65 } from "@/components/recipes";
 
 // Without this, Next.js would try to bake this page's data in once at build
@@ -56,7 +57,7 @@ export default async function OverviewPage() {
 
   return (
     <>
-      <h1 className="font-heading text-[40px]">Overview</h1>
+      <LargeTitle>Overview</LargeTitle>
 
       {rows.length > 0 && (
         <p className={`text-sm ${bodyText65}`}>

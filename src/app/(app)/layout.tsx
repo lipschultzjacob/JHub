@@ -1,19 +1,22 @@
-import { Nav } from "@/components/nav";
+import { TabBar } from "@/components/tab-bar";
 
-// Shared shell for every signed-in page (Overview, Categories, Settings) --
-// puts the Nav bar and the content wrapper in one place instead of
-// repeating them per page. Everything sits in one phone-width column
-// (max-w-app, 430px): JHub is designed as an iPhone app, and on a desktop
-// browser it's just that column centered on the page. The safe-area padding
-// (see globals.css) keeps content clear of the notch and home indicator. The
-// "(app)" folder name is invisible in the URL -- it's a Next.js "route
+// Shared shell for every signed-in page (Overview, Categories, Settings):
+// the page content plus the iPhone-style tab bar fixed to the bottom, in
+// one place instead of repeated per page. Content sits in one phone-width
+// column (max-w-app, 430px): JHub is designed as an iPhone app, and on a
+// desktop browser it's just that column centered on the page. The safe-area
+// padding (see globals.css) keeps content clear of the notch, and pb-tabbar
+// leaves room at the bottom so the last row can scroll up above the tab bar.
+// The "(app)" folder name is invisible in the URL -- it's a Next.js "route
 // group" (see docs/ARCHITECTURE.md) -- login/signup live outside it since
-// the design system calls for no nav bar there.
+// they have no tab bar.
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto flex w-full max-w-app flex-1 flex-col pt-[env(safe-area-inset-top)]">
-      <Nav />
-      <main className="flex flex-1 flex-col gap-6 px-safe pt-6 pb-safe">{children}</main>
-    </div>
+    <>
+      <main className="mx-auto flex w-full max-w-app flex-1 flex-col gap-(--section-gap) px-safe pt-safe pb-tabbar">
+        {children}
+      </main>
+      <TabBar />
+    </>
   );
 }

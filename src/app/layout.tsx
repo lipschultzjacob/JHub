@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 import { AuthSessionProvider } from "@/components/auth-session-provider";
+import { TouchActiveStates } from "@/components/touch-active-states";
 
 // Page-wide info like the title shown in the browser tab, and settings for
 // how the app behaves when installed.
@@ -51,14 +52,16 @@ export const viewport: Viewport = {
 };
 
 // The shared page shell every single page in the app renders inside --
-// the <html>/<body> tags and the service worker registration below all live
-// here once instead of being repeated on every page.
+// the <html>/<body> tags, the service worker registration, and the iPhone
+// pressed-state fix below all live here once instead of being repeated on
+// every page.
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         <AuthSessionProvider>
           <ServiceWorkerRegistration />
+          <TouchActiveStates />
           {children}
         </AuthSessionProvider>
       </body>

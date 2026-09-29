@@ -7,6 +7,7 @@ import { SyncButton } from "@/components/sync-button";
 import { DisconnectBankButton } from "@/components/disconnect-bank-button";
 import { SignOutButton } from "@/components/sign-out-button";
 import { PushToggle } from "@/components/push-toggle";
+import { LargeTitle } from "@/components/large-title";
 import { card, bodyText65, metaText45 } from "@/components/recipes";
 
 // Re-run the query on every visit so a newly connected or disconnected bank
@@ -34,7 +35,7 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <h1 className="font-heading text-[40px]">Settings</h1>
+      <LargeTitle>Settings</LargeTitle>
 
       <section className={card}>
         <h4>Connected banks</h4>

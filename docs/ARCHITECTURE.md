@@ -36,15 +36,15 @@ JHub/
 │   ├── app/                     Next.js's routing system: each folder here becomes a URL
 │   │   ├── layout.tsx            the root page shell every page renders inside (page title, iPhone Home Screen settings, edge-to-edge `viewportFit: "cover"`, per-mode status-bar colors, registers the service worker below). Uses Apple's system font, so nothing is downloaded
 │   │   ├── manifest.ts            describes the app for "install as an app" purposes, auto-served at /manifest.webmanifest
-│   │   ├── (app)/                a "route group" -- the "(app)" folder name is invisible in the URL, it exists only so these pages can share one extra layout.tsx (the top Nav bar) without login/signup getting it too
-│   │   │   ├── layout.tsx          adds the shared Nav bar + content wrapper around every page below, as one centered phone-width column (430px max) with safe-area padding for the notch and home indicator
+│   │   ├── (app)/                a "route group" -- the "(app)" folder name is invisible in the URL, it exists only so these pages can share one extra layout.tsx (the bottom tab bar) without login/signup getting it too
+│   │   │   ├── layout.tsx          adds the iPhone-style bottom tab bar (`TabBar`) + content wrapper around every page below, as one centered phone-width column (430px max) with safe-area padding for the notch, and bottom padding so the last row can scroll up above the tab bar
 │   │   │   ├── page.tsx             the Overview screen, served at "/": lists only unsorted transactions (categoryId IS NULL), newest first, each with an inline category dropdown; shows a "no bank connected" or "all caught up" message when the list is empty, and a pointer to Categories when there are unsorted transactions but you have no categories yet
 │   │   │   ├── categories/
 │   │   │   │   ├── page.tsx          the Categories list, served at "/categories": a "+ New category" card first (a `NewCategoryCard` -- the only place categories get created), then one card per category (a `CategoryCard`) with its transaction count, linking to its detail page, plus inline Rename and Delete
 │   │   │   │   └── [id]/page.tsx     one category's detail page ("/categories/3"): verifies the category belongs to the signed-in user (else 404), then lists its transactions with a dropdown to re-sort each
 │   │   │   └── settings/
 │   │   │       └── page.tsx          the Settings screen, served at "/settings": connected-banks list (with per-bank Disconnect), connect-another and sync buttons, a Notifications card (on/off for this device), and Sign out
-│   │   ├── login/page.tsx          the login form (outside the "(app)" group -- no Nav bar, per the design system)
+│   │   ├── login/page.tsx          the login form (outside the "(app)" group -- no tab bar, per the design system)
 │   │   ├── signup/page.tsx         the create-account form (same)
 │   │   └── api/                  backend endpoints the frontend calls (no separate backend project needed)
 │   │       ├── auth/
@@ -64,8 +64,10 @@ JHub/
 │   ├── components/               Interactive pieces of the UI (buttons, dropdowns) that run in the browser
 │   │   ├── service-worker-registration.tsx
 │   │   ├── auth-session-provider.tsx  makes the current login session available throughout the app
-│   │   ├── nav.tsx                the top nav bar shown on every signed-in page (a Server Component -- looks up the signed-in email directly rather than reacting to anything)
-│   │   ├── nav-links.tsx          the nav's page links, split out as a Client Component since only the browser knows the current URL (to mark the active link)
+│   │   ├── touch-active-states.tsx  adds the empty touch listener iPhone Safari needs before it shows pressed-state (`active:`) styles; rendered once in the root layout
+│   │   ├── tab-bar.tsx            the bottom tab bar (Overview, Categories, Settings) on every signed-in page: Lucide icon + label per tab, current one tinted (a Client Component, since only the browser knows the current URL)
+│   │   ├── large-title.tsx        a screen's 34px "Large Title" heading, iOS-style
+│   │   ├── grouped-list.tsx       the iOS grouped inset list: `ListSection` (a rounded block of rows with optional header/footer) and `ListRow` (44px+ row: title, subtitle, value, accessory, chevron; a link or button when given href/onClick)
 │   │   ├── recipes.ts             shared Tailwind class-name strings (buttons, inputs, cards) from the design system, so components don't each repeat -- or drift out of sync with -- the same long class string. Not a component; plain exported strings
 │   │   ├── transaction-row.tsx    one transaction in a list (merchant, date/account, amount, category dropdown); a Server Component shared by Overview and the category detail page
 │   │   ├── sign-out-button.tsx    shown on the Settings screen; turns off push notifications on this device before signing out
@@ -114,9 +116,10 @@ A component only runs in the *browser* instead when the file starts with `"use c
 — that's called a "Client Component," and it's needed whenever something has to react to clicks,
 hold on-screen state, or use browser-only features. Most of `src/components/` is a Client Component
 for exactly that reason: registering the service worker, opening Plaid's popup, saving a dropdown
-change. The two exceptions are `nav.tsx` (a Server Component -- it looks up the signed-in email
-directly instead of reacting to anything) and `recipes.ts` (not a component at all, just shared
-Tailwind class-name strings importable from either kind).
+change. The exceptions are the presentation pieces with no interactivity of their own --
+`large-title.tsx`, `grouped-list.tsx` and `transaction-row.tsx` -- which work inside either kind,
+and `recipes.ts` (not a component at all, just shared Tailwind class-name strings importable from
+either kind).
 
 ### The "installable app" layer (PWA)
 "PWA" stands for Progressive Web App — a website that can be installed like a real app (icon on your

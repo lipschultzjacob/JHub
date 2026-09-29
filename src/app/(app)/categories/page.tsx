@@ -4,6 +4,7 @@ import { categories, transactions } from "@/db/schema";
 import { auth } from "@/auth";
 import { CategoryCard } from "@/components/category-card";
 import { NewCategoryCard } from "@/components/new-category-card";
+import { LargeTitle } from "@/components/large-title";
 import { card, bodyText65 } from "@/components/recipes";
 
 // Re-run the queries on every visit instead of freezing the page at build
@@ -42,7 +43,7 @@ export default async function CategoriesPage() {
 
   return (
     <>
-      <h1 className="font-heading text-[40px]">Categories</h1>
+      <LargeTitle>Categories</LargeTitle>
 
       {rows.length === 0 && (
         <div className={card}>

@@ -23,25 +23,71 @@ Type (Apple's text styles, size + line height + weight in one class): `text-larg
 Safe areas: `pt-safe`, `pb-safe`, `px-safe` (padding that clears the notch / status bar / home
 indicator, never less than the normal margin). `max-w-app` = the 430px phone column.
 
-## Page shell
+Spacing: new iOS-style code uses whole-pixel values — `gutter` (16px, e.g. `px-gutter`),
+`--edge` (20px), `--section-gap` (32px, `gap-(--section-gap)`). Avoid the old `1/2/3/4/6/8` steps
+in new code: they're a 0.85× scale (`p-4` is 13.6px) whose fractional positions can make
+hairlines vanish. Positioning classes don't accept custom spacing names (`left-gutter` does
+nothing), so use the variable form: `left-(--gutter)`.
+
+**Hairlines** (thin iOS separators): draw them as a **0.5px border**, never a 0.5px-tall box.
+Browsers draw a nonzero border at least one device pixel wide, but snap a 0.5px *box* to zero, so
+it silently disappears.
+
+**Pressed states** (`active:`) work on iPhone because `TouchActiveStates` (root layout) adds the
+touch listener Safari needs before it applies `:active`.
+
+## Page shell — `src/app/(app)/layout.tsx`
 
 ```tsx
-<div className="mx-auto flex w-full max-w-app flex-1 flex-col pt-[env(safe-area-inset-top)]">
-  <Nav />
-  <main className="flex flex-1 flex-col gap-6 px-safe pt-6 pb-safe">{children}</main>
-</div>
+<main className="mx-auto flex w-full max-w-app flex-1 flex-col gap-(--section-gap) px-safe pt-safe pb-tabbar">
+  {children}
+</main>
+<TabBar />
 ```
 
-## Nav
+`pb-tabbar` leaves room for the tab bar + home indicator so the last row can scroll above the bar.
+
+## Tab bar — `src/components/tab-bar.tsx`
+
+Fixed to the bottom, full width, with a blurred see-through background:
+`fixed inset-x-0 bottom-0 z-10 border-t-[0.5px] border-separator bg-bar pb-home-indicator backdrop-blur-xl`.
+Inside, a `max-w-app` row of 49px (`h-(--tab-bar-height)`). Each tab is a Link:
+`flex flex-1 flex-col items-center gap-0.5 pt-1.5 no-underline active:opacity-60`, `text-accent`
+when selected (`aria-current="page"`), otherwise `text-text-secondary`. It holds a Lucide icon
+(24px, stroke 1.75) over a `text-[10px] leading-3 font-medium` label. The icons are Inbox
+(Overview), Tags (Categories), and Settings.
+
+## Large title — `src/components/large-title.tsx`
+
+`<LargeTitle>Settings</LargeTitle>` is an `<h1 className="m-0 text-large-title">` (34/41 bold) at
+the top of each tab's content. Pushed screens (e.g. a category's detail) get a nav bar instead;
+that's built in the Categories issue.
+
+## Grouped inset list — `src/components/grouped-list.tsx`
 
 ```tsx
-<nav className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-divider">
-  <span className="font-heading text-[18px] tracking-[0.04em] mr-auto">JHUB</span>
-  <Link href="/" className="text-sm hover:text-accent aria-[current=page]:text-accent">Overview</Link>
-  {/* Transactions, Categories, Settings */}
-  <span className="text-xs INK-45">{email}</span>
-</nav>
+<ListSection header="Connected banks" footer="Last synced a minute ago.">
+  <ListRow title="Chase" subtitle="Connected 2026-09-12" chevron href="/settings/banks/1" />
+  <ListRow title="Groceries" value="12" chevron href="/categories/3" />
+  <ListRow title="Connect a Bank" tone="tint" onClick={connect} />
+</ListSection>
+<ListSection>
+  <ListRow title="Sign Out" tone="destructive" onClick={signOut} />
+</ListSection>
 ```
+
+- Section: `rounded-list bg-surface overflow-hidden`. The header is `text-footnote uppercase
+  text-text-secondary px-gutter pb-1.5` and the footer is the same without uppercase, with `pt-1.5`.
+- Row: `min-h-11` (44px), `px-gutter py-2.5`, `bg-surface`. `active:bg-fill-pressed` applies only
+  when it's a link/button. The title is `text-body`, the subtitle `text-subheadline
+  text-text-secondary`, the value `text-body text-text-secondary tabular-nums`, and the chevron is a
+  Lucide ChevronRight at 18px.
+- Separator: an `::after` on every row but the last, inset to the text's left edge:
+  `not-last:after:absolute not-last:after:right-0 not-last:after:bottom-0
+  not-last:after:left-(--gutter) not-last:after:h-0 not-last:after:border-b-[0.5px]
+  not-last:after:border-separator`.
+- Tones: `default` (`text-text`), `tint` (`text-accent`, action rows), `destructive` (`text-red`).
+- `accessory` holds anything else on the right: a switch, a dropdown.
 
 ## Card
 

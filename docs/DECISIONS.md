@@ -603,3 +603,22 @@ cost of more work on the parts that have to feel right (sheets, swipe-to-delete)
 recipes (`src/components/recipes.ts`, `docs/design/components.md`) will be replaced. Desktop gets
 no layout of its own, just a centered phone-width column. Apple's SF Symbols icons can't be used on
 the web, so tab and row icons come from Lucide, a new dependency and the closest free match.
+
+---
+
+## 2026-09-29 — Two CSS gotchas hit while building the iOS app shell (issue #22)
+
+**1. Element defaults must live in Tailwind's `base` layer.** `globals.css` styled `h1`–`h6`, `body`,
+`a` etc. outside any CSS layer. In CSS, unlayered rules beat *every* layered rule, and all Tailwind
+classes live in a layer, so the element rules silently won. For example, the category cards'
+`<h4 className="text-[15px]">` actually rendered at 20px. Those defaults now sit in `@layer base`, so
+classes win as expected. The one exception is kept unlayered on purpose: the `select` rule, whose
+extra right padding (room for the drawn arrow) has to beat the `px-2.5` class the inputs use.
+
+**2. Thin iOS separators must be 0.5px *borders*, not 0.5px-tall boxes.** A 0.5px-tall element (by
+`height` or by scaling a 1px one) got snapped to zero and vanished, even at a true 2x pixel density.
+A 0.5px border is always drawn at least one device pixel wide, so it's reliable. A related trap: the
+old 0.85x spacing steps (`p-4` = 13.6px, `gap-6` = 20.4px) put content on fractional pixel positions,
+which makes thin lines flicker in and out. New iOS code uses whole-pixel tokens (`--gutter`,
+`--edge`, `--section-gap`) instead. Positioning classes don't accept custom spacing names
+(`left-gutter` generated nothing), so the variable form `left-(--gutter)` is used.
