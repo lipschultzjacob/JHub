@@ -68,6 +68,10 @@ JHub/
 │   │   ├── tab-bar.tsx            the bottom tab bar (Overview, Categories, Settings) on every signed-in page: Lucide icon + label per tab, current one tinted (a Client Component, since only the browser knows the current URL)
 │   │   ├── large-title.tsx        a screen's 34px "Large Title" heading, iOS-style
 │   │   ├── grouped-list.tsx       the iOS grouped inset list: `ListSection` (a rounded block of rows with optional header/footer) and `ListRow` (44px+ row: title, subtitle, value, accessory, chevron; a link or button when given href/onClick)
+│   │   ├── swipe-row.tsx          wraps a ListRow so it can be swiped left to reveal red actions (Delete); full swipe runs the first action; one open row at a time; vertical scrolling untouched
+│   │   ├── action-sheet.tsx       the iOS confirmation panel from the bottom (message, red confirm button, separate Cancel) used before destructive actions
+│   │   ├── sheet.tsx              the iOS sheet that slides up for creating/editing (Cancel / title / Save bar, form inside); stays above the iPhone keyboard; `primeKeyboard()` lets the opening tap bring the keyboard up
+│   │   ├── overlay.tsx            shared plumbing for sheet.tsx and action-sheet.tsx: appear/disappear animation timing, page scroll lock, Escape to close, keyboard height, and a Portal that renders into <body>
 │   │   ├── recipes.ts             shared Tailwind class-name strings (buttons, inputs, cards) from the design system, so components don't each repeat -- or drift out of sync with -- the same long class string. Not a component; plain exported strings
 │   │   ├── transaction-row.tsx    one transaction in a list (merchant, date/account, amount, category dropdown); a Server Component shared by Overview and the category detail page
 │   │   ├── sign-out-button.tsx    shown on the Settings screen; turns off push notifications on this device before signing out

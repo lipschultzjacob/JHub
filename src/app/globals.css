@@ -21,6 +21,15 @@
   --color-green: #248a3d;            /* money coming in */
   --color-red: #ff3b30;              /* destructive actions (Delete) */
   --color-bar: rgba(249, 249, 249, 0.8); /* see-through background of the tab bar (blurred behind) */
+  --color-dim: rgba(0, 0, 0, 0.4);   /* darkens the screen behind a sheet (same in both modes) */
+  /* "Elevated" versions of bg/surface, for things floating above the page
+     (sheets). Same as the normal ones in Light mode; in Dark mode they're a
+     step lighter, which is how iOS keeps a sheet visible against black. */
+  --color-bg-elevated: #f2f2f7;
+  --color-surface-elevated: #ffffff;
+  /* The color a list row turns while pressed. A variable (not used directly)
+     so a swipeable row can switch it off mid-swipe -- see swipe-row.tsx. */
+  --row-pressed: var(--color-fill-pressed);
 
   /* Old name for the separator, still used by screens not yet rebuilt in
      the new style (docs/design-system.md's "Transition" note). */
@@ -68,6 +77,8 @@
     --color-green: #30d158;
     --color-red: #ff453a;
     --color-bar: rgba(22, 22, 22, 0.8);
+    --color-bg-elevated: #1c1c1e;
+    --color-surface-elevated: #2c2c2e;
   }
 }
 
@@ -87,6 +98,12 @@
   --color-green: var(--color-green);
   --color-red: var(--color-red);
   --color-bar: var(--color-bar);
+  --color-dim: var(--color-dim);
+  --color-bg-elevated: var(--color-bg-elevated);
+  --color-surface-elevated: var(--color-surface-elevated);
+
+  /* iOS-like motion curve: starts fast, settles gently (ease-ios class). */
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
 
   /* Apple's system font: SF Pro on an iPhone, the platform's own UI font
      elsewhere. Nothing is downloaded. (font-heading is the old name, kept

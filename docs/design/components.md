@@ -88,6 +88,73 @@ that's built in the Categories issue.
   not-last:after:border-separator`.
 - Tones: `default` (`text-text`), `tint` (`text-accent`, action rows), `destructive` (`text-red`).
 - `accessory` holds anything else on the right: a switch, a dropdown.
+- The pressed color is `active:bg-(--row-pressed)`. It's a variable (normally the fill-pressed
+  color) so a swipeable row can switch it off mid-swipe.
+
+## Swipe to delete — `src/components/swipe-row.tsx`
+
+```tsx
+<ListSection>
+  {categories.map((c) => (
+    <SwipeRow key={c.id} actions={[{ label: "Delete", onPress: () => setConfirming(c) }]}>
+      <ListRow title={c.name} value={c.count} chevron href={`/categories/${c.id}`} />
+    </SwipeRow>
+  ))}
+</ListSection>
+```
+
+- Wraps one `ListRow`. The wrapper carries the row separator (`rowSeparatorClass`, exported from
+  grouped-list.tsx), since the row inside it is always its wrapper's last child.
+- Drag left: it follows the finger, then settles open (80px per action) if let go past halfway,
+  otherwise closed. A **full swipe** (past 60% of the row's width) runs the first action directly.
+  Only one row is open at a time, and touching anywhere else closes it.
+- `touch-pan-y`: up/down movement stays a normal page scroll. A drag only counts as a swipe once
+  it's clearly sideways (8px, more horizontal than vertical).
+- The click that ends a swipe is swallowed, so the row's link doesn't fire. A tap on an open row
+  just closes it.
+- Actions are red (`bg-red text-white`) and stay invisible while the row is closed, so no red
+  peeks out at rounded corners. There's deliberately no non-swipe way to reach them (decided on
+  #23).
+
+## Confirmation panel ("action sheet") — `src/components/action-sheet.tsx`
+
+```tsx
+<ActionSheet open={confirming !== null} message="Its 12 transactions will go back to unsorted."
+  confirmLabel="Delete Category" onConfirm={reallyDelete} onCancel={() => setConfirming(null)} />
+```
+
+It's pinned to the bottom, `max-w-app`, `px-2`, over a `bg-dim` backdrop (tapping the backdrop
+cancels). It has two `rounded-[14px] bg-surface` groups: the optional message (`text-footnote
+text-text-secondary`, centered) over the red confirm button, then a separate bold tinted Cancel.
+Buttons are `min-h-14 text-[20px]`. Keyboard focus starts on Cancel.
+
+## Sheet — `src/components/sheet.tsx`
+
+```tsx
+<ListRow title="New Category..." tone="tint"
+  onClick={() => { primeKeyboard(); setAdding(true); }} />
+<Sheet open={adding} title="New Category" saveLabel="Add" saveDisabled={name.trim() === ""}
+  saving={isPending} onCancel={() => setAdding(false)} onSave={save}>
+  <ListSection>…fields…</ListSection>
+</Sheet>
+```
+
+- It slides up (`duration-300 ease-ios`) over `bg-dim`, with `rounded-t-[10px]`, a grabber, and a
+  top bar of Cancel / Headline title / Save (semibold, disabled until valid). The sheet is a
+  `<form>`, so Enter saves.
+- It uses **elevated** colors (`bg-bg-elevated`, and it redefines `--color-surface` to the
+  elevated surface for everything inside). In Light mode these match the normal colors; in Dark
+  mode they're lighter grays, which keeps the sheet visible against a black screen.
+- **Keyboard:** it rises above the iPhone keyboard (`useKeyboardInset`, via
+  `window.visualViewport`). An iPhone only opens the keyboard when a text box is focused *during the
+  tap*, so the tap that opens a sheet with a text box must call `primeKeyboard()` first. The sheet
+  then moves focus to its first field.
+- No drag-down-to-dismiss yet; Cancel, tapping the backdrop, or Escape close it.
+
+Shared overlay plumbing (appear/disappear timing, scroll lock, Escape, keyboard inset, and a
+`Portal` that renders into `<body>` so a swiped row's transform can't drag an overlay along) lives
+in `src/components/overlay.tsx`. Both sheets honor `prefers-reduced-motion`: they fade instead of
+sliding.
 
 ## Card
 

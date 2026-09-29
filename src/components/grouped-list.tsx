@@ -61,12 +61,18 @@ const toneClass = {
   destructive: "text-red",
 };
 
+// The thin line between rows, starting at the text's left edge as in iOS.
+// Drawn as a 0.5px *border* on an "::after" overlay (a 0.5px-tall box would
+// vanish -- see docs/DECISIONS.md), on every row except the section's last.
+// Exported so SwipeRow can put it on its own wrapper around a row.
+export const rowSeparatorClass =
+  "not-last:after:absolute not-last:after:right-0 not-last:after:bottom-0 not-last:after:left-(--gutter) " +
+  "not-last:after:h-0 not-last:after:border-b-[0.5px] not-last:after:border-separator";
+
 // One row of a ListSection: at least 44px tall (Apple's minimum tap size),
 // title with an optional subtitle, and optional value / accessory / chevron
 // on the right. It becomes a link (href) or a button (onClick) when given
-// one, and then darkens while pressed. Rows are separated by a thin line
-// that starts at the text's left edge, as in iOS, drawn by the "after:"
-// classes (on every row except the section's last).
+// one, and then darkens while pressed (the --row-pressed color).
 export function ListRow({
   title,
   subtitle,
@@ -82,9 +88,7 @@ export function ListRow({
   const interactive = Boolean(href || onClick) && !disabled;
   const className =
     "relative flex min-h-11 w-full items-center gap-2.5 bg-surface px-gutter py-2.5 text-left no-underline " +
-    "not-last:after:absolute not-last:after:right-0 not-last:after:bottom-0 not-last:after:left-(--gutter) " +
-    "not-last:after:h-0 not-last:after:border-b-[0.5px] not-last:after:border-separator " +
-    `${toneClass[tone]} ${interactive ? "active:bg-fill-pressed" : ""} ${disabled ? "opacity-45" : ""}`;
+    `${rowSeparatorClass} ${toneClass[tone]} ${interactive ? "active:bg-(--row-pressed)" : ""} ${disabled ? "opacity-45" : ""}`;
 
   const content = (
     <>
