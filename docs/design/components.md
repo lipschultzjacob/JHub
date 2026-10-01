@@ -60,8 +60,25 @@ when selected (`aria-current="page"`), otherwise `text-text-secondary`. It holds
 ## Large title — `src/components/large-title.tsx`
 
 `<LargeTitle>Settings</LargeTitle>` is an `<h1 className="m-0 text-large-title">` (34/41 bold) at
-the top of each tab's content. Pushed screens (e.g. a category's detail) get a nav bar instead;
-that's built in the Categories issue.
+the top of each tab's content. Pushed screens use the nav bar below instead.
+
+## Nav bar (pushed screens) — `src/components/nav-bar.tsx`
+
+`<NavBar title="Chase" backHref="/settings" backLabel="Settings" />` goes at the top of a screen
+you go *into* from a list (e.g. a bank's screen inside Settings). It's a `grid
+grid-cols-[1fr_auto_1fr]` row, `min-h-11`. On the left is a tinted Link (Lucide ChevronLeft, 28px,
++ the label, `active:opacity-60`), and in the middle a truncated `text-headline` `<h1>`. The tab bar
+stays visible on pushed screens, and the parent tab stays selected.
+
+## Switch — `src/components/switch.tsx`
+
+`<ListRow title="Notifications" accessory={<Switch label="Notifications" checked={on}
+onChange={toggle} disabled={!usable} />} />`
+
+It's the iOS on/off switch: a 51×31 pill track (`--color-accent` when on, `--color-switch-off`
+when off) with a 27px white knob that slides 20px. The moving parts are inline styles. It's a
+`role="switch"` button with `aria-checked`, and it's grayed out (`opacity-45`) when disabled, with
+the reason in the section footer.
 
 ## Grouped inset list — `src/components/grouped-list.tsx`
 

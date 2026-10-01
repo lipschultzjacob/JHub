@@ -27,6 +27,7 @@
      step lighter, which is how iOS keeps a sheet visible against black. */
   --color-bg-elevated: #f2f2f7;
   --color-surface-elevated: #ffffff;
+  --color-switch-off: rgba(120, 120, 128, 0.16); /* the gray track of a switch that's off */
   /* The color a list row turns while pressed. A variable (not used directly)
      so a swipeable row can switch it off mid-swipe -- see swipe-row.tsx. */
   --row-pressed: var(--color-fill-pressed);
@@ -79,6 +80,7 @@
     --color-bar: rgba(22, 22, 22, 0.8);
     --color-bg-elevated: #1c1c1e;
     --color-surface-elevated: #2c2c2e;
+    --color-switch-off: rgba(120, 120, 128, 0.32);
   }
 }
 

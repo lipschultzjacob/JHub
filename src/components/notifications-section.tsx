@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { buttonSecondary, bodyText65 } from "@/components/recipes";
+import { ListSection, ListRow } from "@/components/grouped-list";
+import { Switch } from "@/components/switch";
 import {
   isPushSupported,
   getCurrentSubscription,
@@ -14,11 +15,13 @@ import {
 // so notifications can't work -- see service-worker-registration.tsx).
 type Status = "loading" | "dev" | "unsupported" | "denied" | "off" | "on";
 
-// The body of the Notifications card on Settings: a line saying whether
-// notifications are on for THIS device, plus a Turn on / Turn off button.
-// Each device (browser or phone) subscribes separately, so this never
-// affects your other devices.
-export function PushToggle() {
+// The Notifications section on Settings: one "Notifications" row with an
+// iOS switch that turns notifications on or off for THIS device, and a
+// short explanation underneath. Each device (browser or phone) subscribes
+// separately, so this never affects your other devices. When notifications
+// can't be used here (blocked, unsupported browser, dev server), the switch
+// is grayed out and the explanation says why.
+export function NotificationsSection() {
   const [status, setStatus] = useState<Status>("loading");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +44,7 @@ export function PushToggle() {
   }, []);
 
   // Turns notifications on or off (whichever they aren't), keeping the
-  // button disabled while it works and showing an error if it fails.
+  // switch disabled while it works and showing an error if it fails.
   async function toggle() {
     setPending(true);
     setError(null);
@@ -62,40 +65,32 @@ export function PushToggle() {
     }
   }
 
-  if (status === "loading") return null;
-
-  const message = {
-    dev: "Notifications only work in the production app -- the service worker they rely on is turned off during development.",
+  // The explanation under the section. While still checking ("loading"),
+  // the section shows with the switch off and grayed, so nothing jumps.
+  const explanation = {
+    loading: undefined,
+    dev: "Notifications only work in the installed app, not on the development server.",
     unsupported:
-      "This browser can't show notifications. On an iPhone, add JHub to your Home Screen first, then open it from there.",
-    denied:
-      "Notifications are blocked for this site. Allow them in your browser's site settings, then reload this page.",
-    off: "Notifications are off on this device.",
-    on: "Notifications are on for this device. You'll get one when a new transaction comes in.",
+      "This browser can't show notifications. On an iPhone, add JHub to your Home Screen and open it from there.",
+    denied: "Notifications are blocked for JHub. Allow them in iPhone Settings, then reopen JHub.",
+    off: "Get a notification on this device when a new transaction comes in.",
+    on: "Get a notification on this device when a new transaction comes in.",
   }[status];
+  const usable = status === "on" || status === "off";
 
   return (
-    <>
-      <p className={`text-sm ${bodyText65}`}>{message}</p>
-      {(status === "on" || status === "off") && (
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={toggle}
-            disabled={pending}
-            className={buttonSecondary}
-          >
-            {pending
-              ? status === "on"
-                ? "Turning off..."
-                : "Turning on..."
-              : status === "on"
-                ? "Turn off"
-                : "Turn on"}
-          </button>
-          {error && <span className="text-xs text-red">{error}</span>}
-        </div>
-      )}
-    </>
+    <ListSection footer={error ?? explanation}>
+      <ListRow
+        title="Notifications"
+        accessory={
+          <Switch
+            label="Notifications"
+            checked={status === "on"}
+            onChange={toggle}
+            disabled={!usable || pending}
+          />
+        }
+      />
+    </ListSection>
   );
 }

@@ -2,22 +2,27 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { plaidItems } from "@/db/schema";
 import { auth } from "@/auth";
-import { PlaidLinkButton } from "@/components/plaid-link-button";
-import { SyncButton } from "@/components/sync-button";
-import { DisconnectBankButton } from "@/components/disconnect-bank-button";
-import { SignOutButton } from "@/components/sign-out-button";
-import { PushToggle } from "@/components/push-toggle";
 import { LargeTitle } from "@/components/large-title";
-import { card, bodyText65, metaText45 } from "@/components/recipes";
+import { ListSection, ListRow } from "@/components/grouped-list";
+import { ConnectBankRow } from "@/components/connect-bank-row";
+import { SyncSection } from "@/components/sync-section";
+import { NotificationsSection } from "@/components/notifications-section";
+import { SignOutRow } from "@/components/sign-out-row";
+import { formatDate } from "@/lib/format-date";
 
 // Re-run the query on every visit so a newly connected or disconnected bank
 // shows up right away instead of a build-time snapshot.
 export const dynamic = "force-dynamic";
 
-// The Settings screen ("/settings"): manage connected banks (connect,
-// sync, disconnect), turn notifications on/off for this device, and sign out. A "Server Component" (see ARCHITECTURE.md)
-// that queries the database directly; the buttons are the browser-side parts.
-// The proxy (src/proxy.ts) already guarantees you're logged in.
+// The Settings screen ("/settings"), as iOS-style grouped sections:
+// - Connected Banks: one row per bank (tap one to open its screen, where it
+//   can be disconnected), then "Connect a Bank"
+// - Sync Now (only once a bank is connected)
+// - Notifications: the on/off switch for this device
+// - Account: your email, and Sign Out
+// A "Server Component" (see ARCHITECTURE.md) that queries the database
+// directly; the rows that react to taps are the browser-side parts. The
+// proxy (src/proxy.ts) already guarantees you're logged in.
 export default async function SettingsPage() {
   const session = await auth();
   const userId = Number(session!.user.id);
@@ -37,54 +42,30 @@ export default async function SettingsPage() {
     <>
       <LargeTitle>Settings</LargeTitle>
 
-      <section className={card}>
-        <h4>Connected banks</h4>
-
+      <ListSection header="Connected Banks">
         {items.length === 0 && (
-          <p className={`text-sm ${bodyText65}`}>
-            No bank connected yet. Connect one to start pulling in transactions.
-          </p>
+          <ListRow title={<span className="text-text-secondary">No banks connected yet</span>} />
         )}
+        {items.map((item) => (
+          <ListRow
+            key={item.id}
+            title={item.institutionName ?? "Unnamed bank"}
+            subtitle={`Connected ${formatDate(item.createdAt)}`}
+            chevron
+            href={`/settings/banks/${item.id}`}
+          />
+        ))}
+        <ConnectBankRow />
+      </ListSection>
 
-        <div className="flex flex-col">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[color-mix(in_srgb,var(--color-text)_8%,transparent)] py-[var(--row-pad)]"
-            >
-              <div className="min-w-[160px] flex-1">
-                <div className="truncate text-[15px]">
-                  {item.institutionName ?? "Unnamed bank"}
-                </div>
-                <div className={`text-[11px] ${metaText45}`}>
-                  Connected {item.createdAt.toISOString().slice(0, 10)}
-                </div>
-              </div>
-              <DisconnectBankButton
-                itemId={item.id}
-                institutionName={item.institutionName ?? "this bank"}
-              />
-            </div>
-          ))}
-        </div>
+      {items.length > 0 && <SyncSection />}
 
-        <div className="flex flex-wrap items-center gap-3">
-          <PlaidLinkButton />
-          {items.length > 0 && <SyncButton />}
-        </div>
-      </section>
+      <NotificationsSection />
 
-      <section className={card}>
-        <h4>Notifications</h4>
-        <PushToggle />
-      </section>
-
-      <section className={card}>
-        <h4>Account</h4>
-        <div className="flex flex-wrap items-center gap-3">
-          <SignOutButton />
-        </div>
-      </section>
+      <ListSection header="Account">
+        <ListRow title={session!.user.email} />
+        <SignOutRow />
+      </ListSection>
     </>
   );
 }

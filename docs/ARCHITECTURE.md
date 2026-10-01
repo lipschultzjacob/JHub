@@ -43,7 +43,8 @@ JHub/
 │   │   │   │   ├── page.tsx          the Categories list, served at "/categories": a "+ New category" card first (a `NewCategoryCard` -- the only place categories get created), then one card per category (a `CategoryCard`) with its transaction count, linking to its detail page, plus inline Rename and Delete
 │   │   │   │   └── [id]/page.tsx     one category's detail page ("/categories/3"): verifies the category belongs to the signed-in user (else 404), then lists its transactions with a dropdown to re-sort each
 │   │   │   └── settings/
-│   │   │       └── page.tsx          the Settings screen, served at "/settings": connected-banks list (with per-bank Disconnect), connect-another and sync buttons, a Notifications card (on/off for this device), and Sign out
+│   │   │       ├── page.tsx          the Settings screen, served at "/settings", as iOS grouped sections: Connected Banks (a row per bank, opening its screen, plus "Connect a Bank"), Sync Now, Notifications (on/off switch for this device), Account (your email + Sign Out, which confirms first)
+│   │   │       └── banks/[id]/page.tsx  one bank's screen ("/settings/banks/3"): verifies the bank belongs to the signed-in user (else 404), then shows a "‹ Settings" nav bar, the bank's accounts (name, "Checking ••0000"), when it was connected, and a red Disconnect Bank row
 │   │   ├── login/page.tsx          the login form (outside the "(app)" group -- no tab bar, per the design system)
 │   │   ├── signup/page.tsx         the create-account form (same)
 │   │   └── api/                  backend endpoints the frontend calls (no separate backend project needed)
@@ -74,11 +75,13 @@ JHub/
 │   │   ├── overlay.tsx            shared plumbing for sheet.tsx and confirm-alert.tsx: appear/disappear animation timing, page scroll lock, Escape to close, keyboard height, and a Portal that renders into <body>
 │   │   ├── recipes.ts             shared Tailwind class-name strings (buttons, inputs, cards) from the design system, so components don't each repeat -- or drift out of sync with -- the same long class string. Not a component; plain exported strings
 │   │   ├── transaction-row.tsx    one transaction in a list (merchant, date/account, amount, category dropdown); a Server Component shared by Overview and the category detail page
-│   │   ├── sign-out-button.tsx    shown on the Settings screen; turns off push notifications on this device before signing out
-│   │   ├── disconnect-bank-button.tsx  the per-bank Disconnect button on Settings: confirm popup, calls DELETE /api/plaid/items/[id], then refreshes
-│   │   ├── plaid-link-button.tsx
-│   │   ├── sync-button.tsx
-│   │   ├── push-toggle.tsx        the Notifications card's body on Settings: says whether notifications are on for this device, with a Turn on / Turn off button (or a message if this browser can't do push, has blocked it, or is the dev build)
+│   │   ├── sign-out-row.tsx       the red Sign Out row on Settings: asks "Sign Out?" first, then turns off push notifications on this device before signing out
+│   │   ├── disconnect-bank-row.tsx  the red Disconnect Bank row on a bank's screen: asks "Disconnect X?" (its transactions get deleted), calls DELETE /api/plaid/items/[id], then returns to Settings
+│   │   ├── connect-bank-row.tsx   the blue "Connect a Bank" row on Settings: fetches a link token, then opens Plaid's popup
+│   │   ├── sync-section.tsx       the "Sync Now" section on Settings: manual sync, with the result shown under it
+│   │   ├── notifications-section.tsx  the Notifications section on Settings: an iOS switch for this device (grayed out, with the reason, if this browser can't do push, has blocked it, or is the dev build)
+│   │   ├── switch.tsx             the iOS on/off switch, for a ListRow's accessory slot
+│   │   ├── nav-bar.tsx            the top bar of a pushed screen: tinted "‹ Back" link + centered title
 │   │   ├── category-card.tsx      one card on the Categories list: name link + count, with an inline Rename (text box, Save/Cancel; calls PATCH /api/categories/[id]) and an inline Delete confirmation ("Delete X? N transactions will go back to unsorted"; calls DELETE /api/categories/[id])
 │   │   ├── new-category-card.tsx  the "+ New category" card at the start of the Categories list: opens a name box with Save/Cancel; calls POST /api/categories
 │   │   └── category-select.tsx
@@ -90,7 +93,8 @@ JHub/
 │   │   ├── plaid-sync.ts          the actual "fetch new transactions and save them" logic, shared by the manual sync button and the webhook
 │   │   ├── plaid-webhook-verify.ts confirms an incoming webhook request genuinely came from Plaid
 │   │   ├── web-push.ts            sends a push notification to one saved subscription
-│   │   ├── push-client.ts         browser-only helpers to turn this device's push notifications on/off (permission prompt, Web Push subscribe/unsubscribe, saving to /api/push/subscribe); used by push-toggle.tsx and sign-out-button.tsx
+│   │   ├── format-date.ts         formats dates the iOS way for lists ("Sep 12, 2026")
+│   │   ├── push-client.ts         browser-only helpers to turn this device's push notifications on/off (permission prompt, Web Push subscribe/unsubscribe, saving to /api/push/subscribe); used by notifications-section.tsx and sign-out-row.tsx
 │   │   ├── category-name.ts       server-only naming rules shared by category create and rename: trim + length check, and the case-insensitive "you already have that name" check
 │   │   ├── crypto.ts              encrypts/decrypts the Plaid access_token before it's stored (see Database below)
 │   │   └── rate-limit.ts          blocks repeated login/signup attempts past a threshold (see Login below)
@@ -210,7 +214,7 @@ one user's data is never visible or editable by another.
 ### How the Plaid (bank) integration works, step by step
 1. The frontend asks our own backend for a "link token" (`POST /api/plaid/link-token`) — a
    short-lived pass that lets the browser open Plaid's connection popup.
-2. `PlaidLinkButton` opens that popup. You pick your bank and log in *inside Plaid's popup* — your
+2. `ConnectBankRow` (the "Connect a Bank" row on Settings) opens that popup. You pick your bank and log in *inside Plaid's popup* — your
    bank password is never seen by this app.
 3. On success, Plaid hands the browser a `public_token`. The frontend sends that to
    `POST /api/plaid/exchange-token`, which trades it, on the server, for the real long-lived
@@ -251,14 +255,14 @@ The actual "notify me the moment I spend money" feature. Three pieces:
    a connection can silently end up with no webhook attached depending on exactly how it was
    created, with no error at connect time; it only shows up later as "notifications never arrive."
    Calling it again here is harmless if it was already set correctly.
-2. **Subscribing this browser.** The Notifications card on Settings (`PushToggle`, using the
-   helpers in `src/lib/push-client.ts`) controls this device only. "Turn on" asks the browser for
+2. **Subscribing this browser.** The Notifications switch on Settings (`NotificationsSection`,
+   using the helpers in `src/lib/push-client.ts`) controls this device only. Turning it on asks the browser for
    notification permission, then uses the browser's own Web Push API to create a subscription (an
    address + two encryption keys unique to this browser). That gets saved via
    `POST /api/push/subscribe` into `push_subscriptions`. Someone can have several of these (phone,
    laptop, ...) since each browser subscribes independently. Opening Settings on an
    already-subscribed device quietly re-saves its subscription, so the server's record comes back
-   if it was ever lost. "Turn off" unsubscribes in the browser first, then removes the row via
+   if it was ever lost. Switching it off unsubscribes in the browser first, then removes the row via
    `DELETE /api/push/subscribe`; if that removal fails, the leftover row is harmless, because the
    next notification sent to it bounces (404/410) and step 3 deletes it. Signing out runs the same
    "turn off" first, so a signed-out browser stops receiving your notifications. The toggle only

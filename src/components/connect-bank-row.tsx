@@ -3,19 +3,20 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePlaidLink, type PlaidLinkOnSuccessMetadata } from "react-plaid-link";
 import { useRouter } from "next/navigation";
-import { buttonPrimary } from "@/components/recipes";
+import { ListRow } from "@/components/grouped-list";
 
-// The button that starts connecting a bank account. Plaid Link is Plaid's
+// The blue "Connect a Bank" row on Settings, which starts connecting a bank
+// account. Plaid Link is Plaid's
 // own ready-made popup for picking your bank and logging in -- Plaid
 // handles that whole flow and never hands your bank password to us. When it
 // finishes successfully, Plaid gives the browser a short-lived public_token,
 // which this component hands off to our server to be exchanged for the real
 // long-lived connection.
-export function PlaidLinkButton() {
+export function ConnectBankRow() {
   const router = useRouter();
   const [linkToken, setLinkToken] = useState<string | null>(null);
 
-  // As soon as this button appears on the page, ask our server for a link
+  // As soon as this row appears on the page, ask our server for a link
   // token -- the popup can't open without one.
   useEffect(() => {
     fetch("/api/plaid/link-token", { method: "POST" })
@@ -47,9 +48,8 @@ export function PlaidLinkButton() {
     onSuccess,
   });
 
+  // Grayed out for the moment it takes to get the link token.
   return (
-    <button onClick={() => open()} disabled={!ready || !linkToken} className={buttonPrimary}>
-      Connect a bank account
-    </button>
+    <ListRow title="Connect a Bank" tone="tint" onClick={() => open()} disabled={!ready || !linkToken} />
   );
 }

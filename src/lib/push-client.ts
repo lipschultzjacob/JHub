@@ -1,6 +1,6 @@
 // Browser-side helpers for turning this device's push notifications on and
-// off. Shared by the Notifications card on Settings (push-toggle.tsx) and the
-// Sign out button (signing out also turns notifications off on the device).
+// off. Shared by the Notifications switch on Settings (notifications-section.tsx)
+// and the Sign Out row (signing out also turns notifications off on the device).
 // Browser-only: these use the browser's Web Push APIs, so only Client
 // Components ("use client") should import this file.
 
