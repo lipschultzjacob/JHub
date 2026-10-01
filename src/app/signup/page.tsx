@@ -4,25 +4,33 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { buttonPrimary, inputBase, fieldLabel, bodyText65 } from "@/components/recipes";
+import { AuthScreen, AuthFields, AuthField, AuthButton } from "@/components/auth-form";
 
-// The signup form. Creating an account happens in two steps: first this
-// posts to our own /api/auth/signup endpoint to actually create the user
-// (Auth.js doesn't handle registration itself, only logging in), then it
-// immediately logs the new account in so there's no separate "now go log in"
-// step.
+// The Sign Up screen ("/signup"). Creating an account happens in two steps:
+// first this posts to our own /api/auth/signup endpoint to actually create
+// the user (Auth.js doesn't handle registration itself, only logging in),
+// then it immediately logs the new account in so there's no separate "now
+// go log in" step. The password is typed twice, and the two must match.
+// The fields are marked as a new password, so iCloud Keychain offers a
+// strong one and saves it.
 export default function SignupPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Runs when the form is submitted: creates the account, then logs it in.
+  // Runs when the form is submitted: checks the two passwords match, creates
+  // the account, then logs it in.
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setIsSubmitting(true);
     setError(null);
+    if (password !== confirm) {
+      setError("The passwords don't match.");
+      return;
+    }
+    setIsSubmitting(true);
 
     const res = await fetch("/api/auth/signup", {
       method: "POST",
@@ -31,8 +39,8 @@ export default function SignupPage() {
     });
 
     if (!res.ok) {
-      const data = await res.json();
-      setError(data.error ?? "Something went wrong.");
+      const data = await res.json().catch(() => null);
+      setError(data?.error ?? "Something went wrong.");
       setIsSubmitting(false);
       return;
     }
@@ -43,54 +51,51 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-app flex-1 flex-col justify-center px-safe pt-safe pb-safe">
-      <h1 className="font-heading text-[32px]">Sign up</h1>
-      <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-        <div>
-          <label htmlFor="email" className={fieldLabel}>
-            Email
-          </label>
-          <input
-            id="email"
+    <AuthScreen
+      subtitle="Create your account"
+      footer={
+        <>
+          Already have an account?{" "}
+          <Link href="/login" className="text-accent no-underline active:opacity-60">
+            Log In
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <AuthFields error={error}>
+          <AuthField
+            label="Email"
             type="email"
-            required
+            inputMode="email"
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="next"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={`w-full ${inputBase}`}
           />
-        </div>
-        <div>
-          <label htmlFor="password" className={fieldLabel}>
-            Password (min 8 characters)
-          </label>
-          <input
-            id="password"
+          <AuthField
+            label="Password (at least 8 characters)"
             type="password"
-            required
+            autoComplete="new-password"
             minLength={8}
+            enterKeyHint="next"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={`w-full ${inputBase}`}
           />
-        </div>
-        {/* No semantic red for errors -- the design system's one accent
-            rule -- so this stands out by being full-strength ink against
-            the surrounding secondary (65%) text, not by color. */}
-        {error && (
-          <p role="alert" className="text-sm text-text">
-            {error}
-          </p>
-        )}
-        <button type="submit" disabled={isSubmitting} className={`w-full ${buttonPrimary}`}>
-          {isSubmitting ? "Signing up..." : "Sign up"}
-        </button>
+          <AuthField
+            label="Confirm Password"
+            type="password"
+            autoComplete="new-password"
+            enterKeyHint="go"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
+        </AuthFields>
+        <AuthButton busy={isSubmitting}>{isSubmitting ? "Creating Account..." : "Sign Up"}</AuthButton>
       </form>
-      <p className={`mt-4 text-sm ${bodyText65}`}>
-        Already have an account?{" "}
-        <Link href="/login" className="text-accent active:opacity-60">
-          Log in
-        </Link>
-      </p>
-    </div>
+    </AuthScreen>
   );
 }

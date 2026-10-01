@@ -4,12 +4,13 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { buttonPrimary, inputBase, fieldLabel, bodyText65 } from "@/components/recipes";
+import { AuthScreen, AuthFields, AuthField, AuthButton } from "@/components/auth-form";
 
-// The login form. Submitting it calls Auth.js's signIn function directly
-// from the browser -- that's what actually checks the email/password
-// against the database (see the `authorize` function in src/auth.ts) and
-// sets the login session cookie if it matches.
+// The Log In screen ("/login"). Submitting calls Auth.js's signIn function
+// directly (redirect: false) so a wrong password can be shown right here
+// instead of Auth.js bouncing to its own error page. On success it goes to
+// Overview. The fields are set up so iCloud Keychain can fill in a saved
+// password.
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -17,8 +18,8 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Runs when the form is submitted: attempts to log in, then either shows
-  // an error or sends you to the Overview page.
+  // Runs when the form is submitted: checks the email and password, then
+  // goes to Overview, or shows an error.
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
@@ -41,53 +42,42 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-app flex-1 flex-col justify-center px-safe pt-safe pb-safe">
-      <h1 className="font-heading text-[32px]">Log in</h1>
-      <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-        <div>
-          <label htmlFor="email" className={fieldLabel}>
-            Email
-          </label>
-          <input
-            id="email"
+    <AuthScreen
+      subtitle="Log in to continue"
+      footer={
+        <>
+          Don&apos;t have an account?{" "}
+          <Link href="/signup" className="text-accent no-underline active:opacity-60">
+            Sign Up
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <AuthFields error={error}>
+          <AuthField
+            label="Email"
             type="email"
-            required
+            inputMode="email"
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="next"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={`w-full ${inputBase}`}
           />
-        </div>
-        <div>
-          <label htmlFor="password" className={fieldLabel}>
-            Password
-          </label>
-          <input
-            id="password"
+          <AuthField
+            label="Password"
             type="password"
-            required
+            autoComplete="current-password"
+            enterKeyHint="go"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={`w-full ${inputBase}`}
           />
-        </div>
-        {/* No semantic red for errors -- the design system's one accent
-            rule -- so this stands out by being full-strength ink against
-            the surrounding secondary (65%) text, not by color. */}
-        {error && (
-          <p role="alert" className="text-sm text-text">
-            {error}
-          </p>
-        )}
-        <button type="submit" disabled={isSubmitting} className={`w-full ${buttonPrimary}`}>
-          {isSubmitting ? "Logging in..." : "Log in"}
-        </button>
+        </AuthFields>
+        <AuthButton busy={isSubmitting}>{isSubmitting ? "Logging In..." : "Log In"}</AuthButton>
       </form>
-      <p className={`mt-4 text-sm ${bodyText65}`}>
-        No account?{" "}
-        <Link href="/signup" className="text-accent active:opacity-60">
-          Sign up
-        </Link>
-      </p>
-    </div>
+    </AuthScreen>
   );
 }

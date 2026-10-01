@@ -45,8 +45,8 @@ JHub/
 │   │   │   └── settings/
 │   │   │       ├── page.tsx          the Settings screen, served at "/settings", as iOS grouped sections: Connected Banks (a row per bank, opening its screen, plus "Connect a Bank"), Sync Now, Notifications (on/off switch for this device), Account (your email + Sign Out, which confirms first)
 │   │   │       └── banks/[id]/page.tsx  one bank's screen ("/settings/banks/3"): verifies the bank belongs to the signed-in user (else 404), then shows a "‹ Settings" nav bar, the bank's accounts (name, "Checking ••0000"), when it was connected, and a red Disconnect Bank row
-│   │   ├── login/page.tsx          the login form (outside the "(app)" group -- no tab bar, per the design system)
-│   │   ├── signup/page.tsx         the create-account form (same)
+│   │   ├── login/page.tsx          the Log In screen (outside the "(app)" group -- no tab bar): app icon + "JHub", Email/Password as an iOS grouped section (iCloud Keychain autofill), full-width Log In button, link to Sign Up
+│   │   ├── signup/page.tsx         the Sign Up screen (same look): Email, Password, Confirm Password (must match), creates the account then logs straight in
 │   │   └── api/                  backend endpoints the frontend calls (no separate backend project needed)
 │   │       ├── auth/
 │   │       │   ├── [...nextauth]/ Auth.js's own required routes (login, logout, session check, etc.)
@@ -88,6 +88,7 @@ JHub/
 │   │   ├── rename-category-button.tsx  the "Rename" button in a category screen's nav bar; opens the name sheet prefilled
 │   │   ├── transaction-list-row.tsx  one transaction as an iOS list row: merchant, "Sep 12 · Checking", amount (money in green with "+"), and its category as a blue dropdown
 │   │   ├── empty-state.tsx        the iOS-style empty screen: big gray icon, title, one sentence, optional blue button
+│   │   ├── auth-form.tsx          shared pieces of the Log In / Sign Up screens: AuthScreen (icon + title layout), AuthFields/AuthField (grouped input rows), AuthButton
 │   │   └── category-select.tsx    the category dropdown; saves the choice straight away (PATCH /api/transactions/[id]); takes a className for the in-row look
 │   ├── db/
 │   │   ├── schema.ts              defines the shape of every database table in TypeScript — this file is the single source of truth for what the database looks like
