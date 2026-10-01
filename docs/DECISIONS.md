@@ -646,3 +646,31 @@ browser runs WebKit.
   than headless Chrome. It's Safari's engine, so it catches Safari-specific layout differences.
   It's still not a real iPhone (touch feel, the keyboard, and older iOS versions can differ), so
   the final check stays on the device.
+
+---
+
+## 2026-10-01 — Overview sorts with a card deck and hold-and-drag grid (issue #26)
+
+**Decision:** Overview shows unsorted transactions as a **stack of cards** instead of a list with a
+category dropdown per row. You swipe through the deck (left = next, right = back). To sort, you
+**hold** the top card: the screen becomes a **3×2 grid** of your 5 most-used categories plus
+"More…", with a small ✕ in the middle to cancel. You drag onto a cell and let go. Sorted cards
+disappear instantly, with a 5-second Undo banner. It was built as a throwaway prototype on a test
+page first, tuned on the iPhone (carousel → deck, 8 cells → 6, softer card styling, darker
+cards behind the top one in Dark mode, the card vanishing over the ✕), and then wired in.
+
+**Why:** It was the user's own design idea. Sorting is the app's core repeated task, and a
+one-handed drag makes working through a backlog fast. The most-used-first grid keeps the usual
+picks one drag away, while "More…" keeps every category reachable.
+
+**Tradeoffs:**
+- It's a **custom gesture**, the one deliberate departure from stock iOS controls. A hold isn't
+  discoverable, so a hint sits under the deck ("Hold a card and drag it onto a category").
+- There's **no non-drag way** to sort on Overview (a category's own screen still has its
+  dropdown). There's also no haptic feedback: iPhone Safari doesn't support the vibration API.
+- **Inline styles for the deck and grid.** Shapes, shadows and motion use inline styles rather
+  than Tailwind classes. Earlier class-styled pieces had come through differently on the user's
+  iPhone (sharp corners, misplaced overlays) while rendering correctly in desktop WebKit, and the
+  inline versions have rendered consistently on the phone.
+- **The cell order can shift** as habits change, because it's ranked by usage, which works
+  against muscle memory.

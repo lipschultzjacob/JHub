@@ -38,7 +38,7 @@ JHub/
 │   │   ├── manifest.ts            describes the app for "install as an app" purposes, auto-served at /manifest.webmanifest
 │   │   ├── (app)/                a "route group" -- the "(app)" folder name is invisible in the URL, it exists only so these pages can share one extra layout.tsx (the bottom tab bar) without login/signup getting it too
 │   │   │   ├── layout.tsx          adds the iPhone-style bottom tab bar (`TabBar`) + content wrapper around every page below, as one centered phone-width column (430px max) with safe-area padding for the notch, and bottom padding so the last row can scroll up above the tab bar
-│   │   │   ├── page.tsx             the Overview screen, served at "/": lists only unsorted transactions (categoryId IS NULL), newest first, each with an inline category dropdown; shows a "no bank connected" or "all caught up" message when the list is empty, and a pointer to Categories when there are unsorted transactions but you have no categories yet
+│   │   │   ├── page.tsx             the Overview screen, served at "/": loads your unsorted transactions (categoryId IS NULL, newest first) and your categories ranked most-used first, and hands them to `OverviewDeck`; or shows an empty state instead: "No Bank Connected" (→ Settings) or "No Categories Yet" (→ Categories)
 │   │   │   ├── categories/
 │   │   │   │   ├── page.tsx          the Categories list, served at "/categories": loads your categories with their transaction counts and hands them to `CategoriesView` (large title with a "+" that opens the New Category sheet -- the only place categories get created -- a row per category opening its screen, swipe left to delete after an "are you sure?", and a "No Categories" empty state)
 │   │   │   │   └── [id]/page.tsx     one category's screen ("/categories/3"): verifies the category belongs to the signed-in user (else 404), then shows a "‹ Categories" nav bar with a Rename button, and its transactions as list rows (`TransactionListRow`), each with a dropdown to re-sort it; "No Transactions" empty state
@@ -71,10 +71,11 @@ JHub/
 │   │   ├── grouped-list.tsx       the iOS grouped inset list: `ListSection` (a rounded block of rows with optional header/footer) and `ListRow` (44px+ row: title, subtitle, value, accessory, chevron; a link or button when given href/onClick)
 │   │   ├── swipe-row.tsx          `SwipeToDelete`: wraps a ListRow so swiping it left grows a red trash-can panel; letting go past the threshold calls onDelete (which opens the ConfirmAlert), otherwise it springs back; vertical scrolling untouched
 │   │   ├── confirm-alert.tsx      the centered iOS "are you sure?" alert (title, message, Cancel + red confirm side by side) used before destructive actions
-│   │   ├── sheet.tsx              the iOS sheet that slides up for creating/editing (Cancel / title / Save bar, form inside); stays above the iPhone keyboard; `primeKeyboard()` lets the opening tap bring the keyboard up
+│   │   ├── sheet.tsx              the iOS sheet that slides up for creating/editing (Cancel / title / Save bar, form inside; leave out onSave for a pick-from-a-list sheet with no Save); stays above the iPhone keyboard; `primeKeyboard()` lets the opening tap bring the keyboard up
 │   │   ├── overlay.tsx            shared plumbing for sheet.tsx and confirm-alert.tsx: appear/disappear animation timing, page scroll lock, Escape to close, keyboard height, and a Portal that renders into <body>
 │   │   ├── recipes.ts             shared Tailwind class-name strings (buttons, inputs, cards) from the design system, so components don't each repeat -- or drift out of sync with -- the same long class string. Not a component; plain exported strings
-│   │   ├── transaction-row.tsx    the older transaction row (merchant, date/account, amount, category dropdown), still used by Overview until its rebuild (#26)
+│   │   ├── sort-deck.tsx          Overview's card deck: unsorted transactions as a stack of cards (swipe left = next, right = back); hold the top card and the screen becomes a 3x2 grid of categories (top 5 most-used + "More…", ✕ in the middle cancels); drop to sort; "Sorted into … · Undo" banner
+│   │   ├── overview-deck.tsx      connects SortDeck to the server (PATCH /api/transactions/[id]; null on Undo), shows "All Caught Up", and opens on the card from a notification link (/#transaction-<id>)
 │   │   ├── sign-out-row.tsx       the red Sign Out row on Settings: asks "Sign Out?" first, then turns off push notifications on this device before signing out
 │   │   ├── disconnect-bank-row.tsx  the red Disconnect Bank row on a bank's screen: asks "Disconnect X?" (its transactions get deleted), calls DELETE /api/plaid/items/[id], then returns to Settings
 │   │   ├── connect-bank-row.tsx   the blue "Connect a Bank" row on Settings: fetches a link token, then opens Plaid's popup
@@ -277,7 +278,7 @@ The actual "notify me the moment I spend money" feature. Three pieces:
    transaction" message), then runs the same sync logic as the manual button, then sends a push
    notification (`src/lib/web-push.ts`, using the VAPID keys) to every one of that user's saved
    subscriptions. `public/sw.js`'s `push` handler is what actually displays it, and tapping it opens
-   the app straight to that transaction on Overview (`/#transaction-<id>`, or just `/` for the combined "N new transactions" summary) to categorize it there --
+   the app straight to that transaction on Overview (`/#transaction-<id>`, or just `/` for the combined "N new transactions" summary), where the card deck opens on that transaction's card to sort it --
    full in-notification category buttons were considered but skipped for now (see DECISIONS.md):
    browsers only allow ~2 actions directly on a notification, and iOS doesn't support them at all.
 

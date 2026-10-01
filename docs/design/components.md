@@ -85,6 +85,36 @@ It's centered in the free space (`flex-1`, `py-16`), with a 48px Lucide icon in
 `text-text-secondary` (stroke 1.5), a `text-headline` title, a `text-subheadline` secondary
 sentence, and an optional tinted button. Every list uses one of these when it's empty.
 
+## Sort deck (Overview) — `src/components/sort-deck.tsx`
+
+`<SortDeck transactions={...} categories={rankedMostUsedFirst} assign={save} emptyState={...} />`
+(wired up by `overview-deck.tsx`). This is a custom interaction, tuned on the iPhone:
+
+- **Deck:** the top card, with up to 3 more behind it. Each step back is 5% smaller and 14px lower
+  so the edges show, and is shaded darker by `--deck-shade` (barely in Light, clearly in Dark,
+  where shadows can't show depth). Cards are `--color-surface-elevated`, 28px corners, with the
+  `--card-shadow` token (a soft shadow in Light; a faint light edge plus top highlight in Dark).
+  The content is date · account (top), the amount (46px semibold, money in green "+"), the
+  merchant (Title 3), and a soft "Pending" pill.
+- **Swipe:** left flies the top card off (tilting) to show the next; right brings the previous card
+  back on top. It commits past 25% of the width or on a fast flick, otherwise springs back. The
+  first/last card resists.
+- **Hold (400ms, finger still):** a full-screen dimmed overlay with a **3×2 grid of equal cells**
+  (26px corners, 82% elevated surface, blurred) holding the 5 most-used categories plus
+  "More…", or all 6 if there are six or fewer. A round **✕** (60px) sits dead center to cancel.
+  The hovered cell turns solid tint with `text-on-accent` and grows 3%. A small tilted copy of the
+  card follows the finger; over the ✕ it shrinks away so only the darkened ✕ shows. The deck
+  behind fades to 8%.
+- **Drop:** a category sorts it (the card hides instantly, and the save runs in the background; on
+  failure it comes back with an error). "More…" opens a "Sort Into" sheet listing the rest. The
+  ✕ or a gap cancels. After each sort, a "Sorted into X · Undo" banner shows above the tab bar
+  for 5s.
+- `touch-action: none`, no text selection, and no long-press callout on the deck and grid, so the
+  browser never scrolls or selects mid-gesture. Hit-testing uses `document.elementFromPoint` on
+  `[data-drop]` targets.
+- Shapes, shadows and motion are **inline styles**, which render the same on every iPhone (see
+  docs/DECISIONS.md).
+
 ## Transaction row (list) — `src/components/transaction-list-row.tsx`
 
 One transaction inside a `ListSection`. The left side is the merchant (`text-body`) over

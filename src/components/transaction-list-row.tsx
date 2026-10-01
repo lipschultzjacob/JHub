@@ -1,16 +1,26 @@
 import { CategorySelect } from "@/components/category-select";
 import { rowSeparatorClass } from "@/components/grouped-list";
 import { formatMoney, formatShortDate } from "@/lib/format-money";
-import type { TransactionRowData } from "@/components/transaction-row";
 
 type Category = { id: number; name: string };
+
+export type TransactionRowData = {
+  id: number;
+  amount: string;
+  merchantName: string | null;
+  name: string;
+  date: string;
+  pending: boolean;
+  categoryId: number | null;
+  accountName: string;
+};
 
 // One transaction as an iOS-style list row, for use inside a ListSection:
 // merchant on top with "Sep 12 · Checking" underneath, and on the right the
 // amount (money in shown green with a "+") over its category, which is a
 // dropdown -- tapping it on an iPhone opens Apple's picker wheel to move the
-// transaction to another category. Used on a category's screen; Overview
-// still uses the older TransactionRow until its own rebuild (issue #26).
+// transaction to another category. Used on a category's screen. (Overview
+// sorts with a card deck instead -- see sort-deck.tsx.)
 // No "use client", so it renders on the server; only the dropdown runs in
 // the browser.
 export function TransactionListRow({

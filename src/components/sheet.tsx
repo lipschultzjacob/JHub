@@ -43,7 +43,8 @@ export function primeKeyboard() {
 // the right), and whatever form fields you put inside. Used for creating and
 // editing things (New Category, Rename). Enter in a text box also saves.
 // The panel rises above the on-screen keyboard so its text box stays
-// visible.
+// visible. Leave out `onSave` for a sheet you just pick from (e.g. a list
+// of choices): it then has no Save button.
 //
 // Usage:
 //   <Sheet open={adding} title="New Category" onCancel={close} onSave={save}
@@ -63,7 +64,7 @@ export function Sheet({
   open: boolean;
   title: string;
   onCancel: () => void;
-  onSave: () => void;
+  onSave?: () => void;
   saveLabel?: string;
   saveDisabled?: boolean;
   saving?: boolean;
@@ -118,7 +119,7 @@ export function Sheet({
           aria-labelledby={titleId}
           onSubmit={(e) => {
             e.preventDefault(); // Enter in a text box saves, like tapping Save
-            if (!saveDisabled && !saving) onSave();
+            if (onSave && !saveDisabled && !saving) onSave();
           }}
           // Sits above the keyboard, and slides up from below the screen
           // (or just fades, with Reduce Motion on). The animation uses plain
@@ -144,13 +145,15 @@ export function Sheet({
             <h2 id={titleId} className="m-0 text-headline">
               {title}
             </h2>
-            <button
-              type="submit"
-              disabled={saveDisabled || saving}
-              className={`${barButton} justify-self-end font-semibold`}
-            >
-              {saving ? "Saving..." : saveLabel}
-            </button>
+            {onSave && (
+              <button
+                type="submit"
+                disabled={saveDisabled || saving}
+                className={`${barButton} justify-self-end font-semibold`}
+              >
+                {saving ? "Saving..." : saveLabel}
+              </button>
+            )}
           </div>
           <div className="overflow-y-auto overscroll-contain px-safe pt-2">{children}</div>
         </form>

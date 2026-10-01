@@ -28,6 +28,13 @@
   --color-bg-elevated: #f2f2f7;
   --color-surface-elevated: #ffffff;
   --color-switch-off: rgba(120, 120, 128, 0.16); /* the gray track of a switch that's off */
+  /* Soft layered shadow for floating cards (Overview's deck). In Dark mode
+     shadows barely show against black, so it becomes a faint light edge. */
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 12px 32px rgba(0, 0, 0, 0.09);
+  /* How much darker each card one step back in the deck gets. Barely any in
+     Light mode (shadows already show the depth); clearly more in Dark mode,
+     where shadows don't show against black. */
+  --deck-shade: 0.04;
   /* The color a list row turns while pressed. A variable (not used directly)
      so a swipeable row can switch it off mid-swipe -- see swipe-row.tsx. */
   --row-pressed: var(--color-fill-pressed);
@@ -81,6 +88,9 @@
     --color-bg-elevated: #1c1c1e;
     --color-surface-elevated: #2c2c2e;
     --color-switch-off: rgba(120, 120, 128, 0.32);
+    --card-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.07),
+      0 12px 32px rgba(0, 0, 0, 0.5);
+    --deck-shade: 0.25;
   }
 }
 
