@@ -38,7 +38,7 @@ export function RenameCategoryButton({ id, name }: { id: number; name: string })
           primeKeyboard();
           setOpen(true);
         }}
-        className="-mr-2 min-h-11 px-2 text-body text-accent active:opacity-60"
+        className="-mr-1.75 min-h-11 px-1.75 text-body text-accent active:opacity-60"
       >
         Rename
       </button>

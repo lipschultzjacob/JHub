@@ -301,7 +301,7 @@ export function SortDeck({
       {visible.length === 0 ? (
         emptyState
       ) : (
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-col items-center gap-1.75">
           {/* touch-action: none -- this area's touches are all ours, so the
               browser never scrolls the page in the middle of a sort. */}
           <div
@@ -387,7 +387,7 @@ export function SortDeck({
                     <div
                       key={cell.key}
                       data-drop={cell.key}
-                      className={`flex items-center justify-center px-3 text-center text-headline ${
+                      className={`flex items-center justify-center px-2.5 text-center text-headline ${
                         hover === cell.key ? "text-on-accent" : "text-text"
                       }`}
                       style={{
@@ -506,7 +506,7 @@ export function SortDeck({
           }}
         >
           <div
-            className="flex w-full max-w-app items-center gap-3 pl-5"
+            className="flex w-full max-w-app items-center gap-2.5 pl-5"
             style={{
               pointerEvents: "auto",
               borderRadius: 20,
@@ -547,7 +547,7 @@ function TransactionCard({
   const amount = formatMoney(tx.amount);
   return (
     <div
-      className="flex h-full flex-col items-center justify-between px-6 py-7 text-center"
+      className="flex h-full flex-col items-center justify-between px-5 py-7 text-center"
       style={{
         position: "relative",
         borderRadius: CARD_RADIUS,

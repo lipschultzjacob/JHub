@@ -39,37 +39,22 @@
      so a swipeable row can switch it off mid-swipe -- see swipe-row.tsx. */
   --row-pressed: var(--color-fill-pressed);
 
-  /* Old name for the separator, still used by screens not yet rebuilt in
-     the new style (docs/design-system.md's "Transition" note). */
-  --color-divider: var(--color-separator);
-
-  /* 0.85x density scale (kept from the old design until screens are rebuilt) */
-  --space-1: 3.4px;
-  --space-2: 6.8px;
-  --space-3: 10.2px;
-  --space-4: 13.6px;
-  --space-6: 20.4px;
-  --space-8: 27.2px;
-
   /* Screen-edge margin, and the widest iPhone screen (430px). On a desktop
      browser the whole app is a centered column of this width -- desktop is
      for development only (docs/design-system.md, "Platform"). */
   --gutter: 16px;
   --app-width: 430px;
-  /* Whole-pixel spacing for the new iOS layout. (The old 0.85x steps above
-     are fractional, e.g. 20.4px, which pushes content onto fractional pixel
-     positions where 0.5px hairlines can vanish.) --edge is the minimum
-     top/bottom padding of a screen; --section-gap separates list sections. */
+  /* Spacing is whole pixels throughout (fractional positions can make
+     0.5px hairlines vanish -- see docs/DECISIONS.md). --edge is the minimum
+     top/bottom padding of a screen; --section-gap separates list sections.
+     Everything else uses Tailwind's standard 4px steps (p-4 = 16px). */
   --edge: 20px;
   --section-gap: 32px;
   /* Height of the bottom tab bar, not counting the home-indicator area
      below it (Apple's standard is 49). */
   --tab-bar-height: 49px;
 
-  --soft: 12px;          /* cards, panels */
-  --soft-control: 9px;   /* buttons, inputs, selects */
   --list: 10px;          /* grouped inset list sections (iOS standard) */
-  --row-pad: var(--space-3);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -95,7 +80,7 @@
 }
 
 /* Expose the tokens to Tailwind utilities: bg-bg, bg-surface, text-accent,
-   text-green, bg-fill-pressed, rounded-soft, p-4 (13.6px), max-w-app,
+   text-green, bg-fill-pressed, rounded-list, px-gutter, max-w-app,
    text-body, text-large-title, etc. */
 @theme inline {
   --color-bg: var(--color-bg);
@@ -103,7 +88,6 @@
   --color-text: var(--color-text);
   --color-text-secondary: var(--color-text-secondary);
   --color-separator: var(--color-separator);
-  --color-divider: var(--color-divider);
   --color-fill-pressed: var(--color-fill-pressed);
   --color-accent: var(--color-accent);
   --color-on-accent: var(--color-on-accent);
@@ -118,11 +102,8 @@
   --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
 
   /* Apple's system font: SF Pro on an iPhone, the platform's own UI font
-     elsewhere. Nothing is downloaded. (font-heading is the old name, kept
-     until screens are rebuilt; it's now the same font.) */
+     elsewhere. Nothing is downloaded. */
   --font-sans: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --font-heading: var(--font-sans);
-  --font-body: var(--font-sans);
 
   /* Apple's text styles (docs/design-system.md, "Type scale"). */
   --text-large-title: 34px;
@@ -143,18 +124,10 @@
   --text-caption: 12px;
   --text-caption--line-height: 16px;
 
-  --spacing-1: var(--space-1);
-  --spacing-2: var(--space-2);
-  --spacing-3: var(--space-3);
-  --spacing-4: var(--space-4);
-  --spacing-6: var(--space-6);
-  --spacing-8: var(--space-8);
   --spacing-gutter: var(--gutter);
 
   --container-app: var(--app-width);
 
-  --radius-soft: var(--soft);
-  --radius-control: var(--soft-control);
   --radius-list: var(--list);
 }
 
@@ -212,19 +185,6 @@
     line-height: var(--text-body--line-height);
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading);
-    font-weight: 600;
-    line-height: 1.12;
-    margin: 0 0 var(--space-2);
-  }
-  h1 { font-size: 40px; }
-  h2 { font-size: 32px; }
-  h3 { font-size: 25px; }
-  h4 { font-size: 20px; }
-  h5 { font-size: 16px; }
-  h6 { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
-
   a { color: var(--color-accent); text-underline-offset: 3px; }
 
   :focus { outline: none; }
@@ -232,9 +192,12 @@
   ::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
 }
 
-/* Native selects get a drawn chevron so they match the inputs. Deliberately
-   kept OUTSIDE the base layer above: its extra right padding (room for the
-   chevron) has to beat the px-2.5 padding class that inputBase gives selects. */
+/* Native selects get a drawn chevron (it follows the text color, e.g. the
+   tint on a category dropdown). Deliberately kept OUTSIDE the base layer
+   above: its extra right padding (room for the chevron) has to beat any
+   padding classes on the select. Headings need no defaults here: Tailwind's
+   own reset already strips their browser sizes and margins, and every
+   heading in the app sets its style with a text-* class. */
 select {
   appearance: none;
   padding-right: 26px;

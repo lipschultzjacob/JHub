@@ -18,8 +18,8 @@ export function AuthScreen({
   footer: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto flex w-full max-w-app flex-1 flex-col justify-center gap-8 px-safe pt-safe pb-safe">
-      <div className="flex flex-col items-center gap-3 text-center">
+    <div className="mx-auto flex w-full max-w-app flex-1 flex-col justify-center gap-6.75 px-safe pt-safe pb-safe">
+      <div className="flex flex-col items-center gap-2.5 text-center">
         {/* The app icon, rounded like an iPhone home-screen icon. */}
         {/* eslint-disable-next-line @next/next/no-img-element -- a small static icon; no resizing needed */}
         <img
@@ -29,7 +29,7 @@ export function AuthScreen({
           height={84}
           style={{ borderRadius: 20, boxShadow: "var(--card-shadow)" }}
         />
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-0.75">
           <h1 className="m-0 text-large-title">JHub</h1>
           <p className="m-0 text-subheadline text-text-secondary">{subtitle}</p>
         </div>

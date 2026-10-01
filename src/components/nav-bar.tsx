@@ -18,10 +18,10 @@ export function NavBar({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="grid min-h-11 grid-cols-[1fr_auto_1fr] items-center gap-2">
+    <div className="grid min-h-11 grid-cols-[1fr_auto_1fr] items-center gap-1.75">
       <Link
         href={backHref}
-        className="-ml-2 flex min-h-11 items-center justify-self-start text-body text-accent no-underline active:opacity-60"
+        className="-ml-1.75 flex min-h-11 items-center justify-self-start text-body text-accent no-underline active:opacity-60"
       >
         <ChevronLeft size={28} strokeWidth={2.25} aria-hidden className="-mr-0.5 shrink-0" />
         {backLabel}

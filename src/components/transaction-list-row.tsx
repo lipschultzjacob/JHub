@@ -35,7 +35,7 @@ export function TransactionListRow({
   return (
     <div
       id={`transaction-${row.id}`}
-      className={`relative flex min-h-11 items-center gap-3 bg-surface px-gutter py-2.5 ${rowSeparatorClass}`}
+      className={`relative flex min-h-11 items-center gap-2.5 bg-surface px-gutter py-2.5 ${rowSeparatorClass}`}
     >
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-body">{row.merchantName ?? row.name}</span>

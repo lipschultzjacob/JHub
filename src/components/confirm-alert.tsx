@@ -50,7 +50,7 @@ export function ConfirmAlert({
 
   if (!mounted) return null;
 
-  const button = "min-h-11 px-2 text-body active:bg-(--row-pressed)";
+  const button = "min-h-11 px-1.75 text-body active:bg-(--row-pressed)";
 
   return (
     <Portal>
@@ -75,12 +75,12 @@ export function ConfirmAlert({
             transition: "opacity 200ms, transform 200ms",
           }}
         >
-          <div className="px-4 pt-5 pb-4">
+          <div className="px-3.5 pt-5 pb-3.5">
             <h2 id={titleId} className="m-0 text-headline">
               {shown.title}
             </h2>
             {shown.message && (
-              <p id={messageId} className="m-0 mt-1 text-footnote">
+              <p id={messageId} className="m-0 mt-0.75 text-footnote">
                 {shown.message}
               </p>
             )}

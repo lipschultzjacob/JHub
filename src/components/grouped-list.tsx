@@ -101,7 +101,7 @@ export function ListRow({
       )}
       {accessory}
       {chevron && (
-        <ChevronRight size={18} strokeWidth={2.25} className="-mr-1 shrink-0 text-text-secondary opacity-70" aria-hidden />
+        <ChevronRight size={18} strokeWidth={2.25} className="-mr-0.75 shrink-0 text-text-secondary opacity-70" aria-hidden />
       )}
     </>
   );

@@ -2,25 +2,24 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { inputBase } from "@/components/recipes";
 
 type Category = { id: number; name: string };
 
 // The category dropdown shown next to each transaction. Saves your choice
 // straight to the database as soon as you change it -- this is the same
 // action the push notification's built-in category picker will eventually
-// reuse. `className` replaces the default boxed look (e.g. the plain blue
-// text used inside iOS-style list rows).
+// reuse. `className` sets its look (e.g. the plain blue text used inside
+// TransactionListRow).
 export function CategorySelect({
   transactionId,
   categoryId,
   categories,
-  className = inputBase,
+  className,
 }: {
   transactionId: number;
   categoryId: number | null;
   categories: Category[];
-  className?: string;
+  className: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();

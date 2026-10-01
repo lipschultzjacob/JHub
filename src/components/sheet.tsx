@@ -155,7 +155,7 @@ export function Sheet({
               </button>
             )}
           </div>
-          <div className="overflow-y-auto overscroll-contain px-safe pt-2">{children}</div>
+          <div className="overflow-y-auto overscroll-contain px-safe pt-1.75">{children}</div>
         </form>
       </div>
     </Portal>

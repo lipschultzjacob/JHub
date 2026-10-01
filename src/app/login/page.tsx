@@ -53,7 +53,7 @@ export default function LoginPage() {
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
         <AuthFields error={error}>
           <AuthField
             label="Email"

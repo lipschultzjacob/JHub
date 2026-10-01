@@ -73,7 +73,6 @@ JHub/
 │   │   ├── confirm-alert.tsx      the centered iOS "are you sure?" alert (title, message, Cancel + red confirm side by side) used before destructive actions
 │   │   ├── sheet.tsx              the iOS sheet that slides up for creating/editing (Cancel / title / Save bar, form inside; leave out onSave for a pick-from-a-list sheet with no Save); stays above the iPhone keyboard; `primeKeyboard()` lets the opening tap bring the keyboard up
 │   │   ├── overlay.tsx            shared plumbing for sheet.tsx and confirm-alert.tsx: appear/disappear animation timing, page scroll lock, Escape to close, keyboard height, and a Portal that renders into <body>
-│   │   ├── recipes.ts             shared Tailwind class-name strings (buttons, inputs, cards) from the design system, so components don't each repeat -- or drift out of sync with -- the same long class string. Not a component; plain exported strings
 │   │   ├── sort-deck.tsx          Overview's card deck: unsorted transactions as a stack of cards (swipe left = next, right = back); hold the top card and the screen becomes a 3x2 grid of categories (top 5 most-used + "More…", ✕ in the middle cancels); drop to sort; "Sorted into … · Undo" banner
 │   │   ├── overview-deck.tsx      connects SortDeck to the server (PATCH /api/transactions/[id]; null on Undo), shows "All Caught Up", and opens on the card from a notification link (/#transaction-<id>)
 │   │   ├── sign-out-row.tsx       the red Sign Out row on Settings: asks "Sign Out?" first, then turns off push notifications on this device before signing out
@@ -131,9 +130,8 @@ A component only runs in the *browser* instead when the file starts with `"use c
 hold on-screen state, or use browser-only features. Most of `src/components/` is a Client Component
 for exactly that reason: registering the service worker, opening Plaid's popup, saving a dropdown
 change. The exceptions are the presentation pieces with no interactivity of their own --
-`large-title.tsx`, `grouped-list.tsx`, `nav-bar.tsx`, `empty-state.tsx` and the transaction rows -- which work inside either kind,
-and `recipes.ts` (not a component at all, just shared Tailwind class-name strings importable from
-either kind).
+`large-title.tsx`, `grouped-list.tsx`, `nav-bar.tsx`, `empty-state.tsx`, `auth-form.tsx` and the
+transaction row -- which work inside either kind.
 
 ### The "installable app" layer (PWA)
 "PWA" stands for Progressive Web App — a website that can be installed like a real app (icon on your

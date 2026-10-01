@@ -16,11 +16,11 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-1 px-gutter py-16 text-center">
-      <Icon size={48} strokeWidth={1.5} aria-hidden className="mb-2 text-text-secondary" />
+    <div className="flex flex-1 flex-col items-center justify-center gap-0.75 px-gutter py-16 text-center">
+      <Icon size={48} strokeWidth={1.5} aria-hidden className="mb-1.75 text-text-secondary" />
       <h2 className="m-0 text-headline">{title}</h2>
       <p className="m-0 text-subheadline text-text-secondary">{message}</p>
-      {action && <div className="mt-2">{action}</div>}
+      {action && <div className="mt-1.75">{action}</div>}
     </div>
   );
 }

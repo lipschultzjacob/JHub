@@ -4,11 +4,6 @@ The binding visual rules for this app. Read before adding or changing any UI. Th
 whole spec. When building or reworking a screen, follow the rules below and use judgment for
 layout. Don't treat any one screen's past implementation as a template to copy literally.
 
-> **Transition in progress (from 2026-09-28).** This file describes the *new* iOS-native direction.
-> The app, `docs/design/components.md`, and `src/components/recipes.ts` still reflect the old look
-> (dark-only, Barlow fonts, bordered cards) until each screen's overhaul issue lands. When you touch a
-> screen, build it to this file, not to the old recipes. Replace the old recipes as you go.
-
 ## Platform: an iPhone app
 
 **Design JHub as if it were an iPhone app.** The real product is the app installed on an iPhone
