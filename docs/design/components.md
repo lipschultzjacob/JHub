@@ -62,6 +62,9 @@ when selected (`aria-current="page"`), otherwise `text-text-secondary`. It holds
 `<LargeTitle>Settings</LargeTitle>` is an `<h1 className="m-0 text-large-title">` (34/41 bold) at
 the top of each tab's content. Pushed screens use the nav bar below instead.
 
+`action` puts a button at the far right, level with the title. For example, the Categories "+":
+a 44px tinted Lucide Plus (28px), `-mr-2.5` so the icon lines up with the screen edge.
+
 ## Nav bar (pushed screens) — `src/components/nav-bar.tsx`
 
 `<NavBar title="Chase" backHref="/settings" backLabel="Settings" />` goes at the top of a screen
@@ -69,6 +72,27 @@ you go *into* from a list (e.g. a bank's screen inside Settings). It's a `grid
 grid-cols-[1fr_auto_1fr]` row, `min-h-11`. On the left is a tinted Link (Lucide ChevronLeft, 28px,
 + the label, `active:opacity-60`), and in the middle a truncated `text-headline` `<h1>`. The tab bar
 stays visible on pushed screens, and the parent tab stays selected.
+
+`action` fills the right column with a button. For example, a category's "Rename" is plain tinted
+`text-body` text (`min-h-11`, `active:opacity-60`).
+
+## Empty state — `src/components/empty-state.tsx`
+
+`<EmptyState icon={Tags} title="No Categories" message="Create one to start sorting your
+transactions." action={<button className="min-h-11 text-body text-accent">New Category</button>} />`
+
+It's centered in the free space (`flex-1`, `py-16`), with a 48px Lucide icon in
+`text-text-secondary` (stroke 1.5), a `text-headline` title, a `text-subheadline` secondary
+sentence, and an optional tinted button. Every list uses one of these when it's empty.
+
+## Transaction row (list) — `src/components/transaction-list-row.tsx`
+
+One transaction inside a `ListSection`. The left side is the merchant (`text-body`) over
+"Sep 12 · Checking" (`text-subheadline text-text-secondary`, prefixed "Pending · " if pending). The
+right side is the amount (`tabular-nums`; money in is `text-green` with a "+", via `formatMoney`)
+over the category dropdown, restyled as tinted `text-body` text with no box. It stays 17px so
+iPhone Safari doesn't zoom in when it's tapped, and tapping it opens Apple's picker wheel. The
+row keeps the `transaction-<id>` anchor for notification links.
 
 ## Switch — `src/components/switch.tsx`
 

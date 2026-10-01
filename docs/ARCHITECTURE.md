@@ -40,8 +40,8 @@ JHub/
 │   │   │   ├── layout.tsx          adds the iPhone-style bottom tab bar (`TabBar`) + content wrapper around every page below, as one centered phone-width column (430px max) with safe-area padding for the notch, and bottom padding so the last row can scroll up above the tab bar
 │   │   │   ├── page.tsx             the Overview screen, served at "/": lists only unsorted transactions (categoryId IS NULL), newest first, each with an inline category dropdown; shows a "no bank connected" or "all caught up" message when the list is empty, and a pointer to Categories when there are unsorted transactions but you have no categories yet
 │   │   │   ├── categories/
-│   │   │   │   ├── page.tsx          the Categories list, served at "/categories": a "+ New category" card first (a `NewCategoryCard` -- the only place categories get created), then one card per category (a `CategoryCard`) with its transaction count, linking to its detail page, plus inline Rename and Delete
-│   │   │   │   └── [id]/page.tsx     one category's detail page ("/categories/3"): verifies the category belongs to the signed-in user (else 404), then lists its transactions with a dropdown to re-sort each
+│   │   │   │   ├── page.tsx          the Categories list, served at "/categories": loads your categories with their transaction counts and hands them to `CategoriesView` (large title with a "+" that opens the New Category sheet -- the only place categories get created -- a row per category opening its screen, swipe left to delete after an "are you sure?", and a "No Categories" empty state)
+│   │   │   │   └── [id]/page.tsx     one category's screen ("/categories/3"): verifies the category belongs to the signed-in user (else 404), then shows a "‹ Categories" nav bar with a Rename button, and its transactions as list rows (`TransactionListRow`), each with a dropdown to re-sort it; "No Transactions" empty state
 │   │   │   └── settings/
 │   │   │       ├── page.tsx          the Settings screen, served at "/settings", as iOS grouped sections: Connected Banks (a row per bank, opening its screen, plus "Connect a Bank"), Sync Now, Notifications (on/off switch for this device), Account (your email + Sign Out, which confirms first)
 │   │   │       └── banks/[id]/page.tsx  one bank's screen ("/settings/banks/3"): verifies the bank belongs to the signed-in user (else 404), then shows a "‹ Settings" nav bar, the bank's accounts (name, "Checking ••0000"), when it was connected, and a red Disconnect Bank row
@@ -74,7 +74,7 @@ JHub/
 │   │   ├── sheet.tsx              the iOS sheet that slides up for creating/editing (Cancel / title / Save bar, form inside); stays above the iPhone keyboard; `primeKeyboard()` lets the opening tap bring the keyboard up
 │   │   ├── overlay.tsx            shared plumbing for sheet.tsx and confirm-alert.tsx: appear/disappear animation timing, page scroll lock, Escape to close, keyboard height, and a Portal that renders into <body>
 │   │   ├── recipes.ts             shared Tailwind class-name strings (buttons, inputs, cards) from the design system, so components don't each repeat -- or drift out of sync with -- the same long class string. Not a component; plain exported strings
-│   │   ├── transaction-row.tsx    one transaction in a list (merchant, date/account, amount, category dropdown); a Server Component shared by Overview and the category detail page
+│   │   ├── transaction-row.tsx    the older transaction row (merchant, date/account, amount, category dropdown), still used by Overview until its rebuild (#26)
 │   │   ├── sign-out-row.tsx       the red Sign Out row on Settings: asks "Sign Out?" first, then turns off push notifications on this device before signing out
 │   │   ├── disconnect-bank-row.tsx  the red Disconnect Bank row on a bank's screen: asks "Disconnect X?" (its transactions get deleted), calls DELETE /api/plaid/items/[id], then returns to Settings
 │   │   ├── connect-bank-row.tsx   the blue "Connect a Bank" row on Settings: fetches a link token, then opens Plaid's popup
@@ -82,9 +82,12 @@ JHub/
 │   │   ├── notifications-section.tsx  the Notifications section on Settings: an iOS switch for this device (grayed out, with the reason, if this browser can't do push, has blocked it, or is the dev build)
 │   │   ├── switch.tsx             the iOS on/off switch, for a ListRow's accessory slot
 │   │   ├── nav-bar.tsx            the top bar of a pushed screen: tinted "‹ Back" link + centered title
-│   │   ├── category-card.tsx      one card on the Categories list: name link + count, with an inline Rename (text box, Save/Cancel; calls PATCH /api/categories/[id]) and an inline Delete confirmation ("Delete X? N transactions will go back to unsorted"; calls DELETE /api/categories/[id])
-│   │   ├── new-category-card.tsx  the "+ New category" card at the start of the Categories list: opens a name box with Save/Cancel; calls POST /api/categories
-│   │   └── category-select.tsx
+│   │   ├── categories-view.tsx    the interactive part of the Categories list: "+" button, category rows with swipe-to-delete + confirm alert, New Category sheet, empty state
+│   │   ├── category-name-sheet.tsx  the sheet for typing a category name, shared by New Category and Rename (shows the server's error, e.g. a duplicate name, inside the sheet)
+│   │   ├── rename-category-button.tsx  the "Rename" button in a category screen's nav bar; opens the name sheet prefilled
+│   │   ├── transaction-list-row.tsx  one transaction as an iOS list row: merchant, "Sep 12 · Checking", amount (money in green with "+"), and its category as a blue dropdown
+│   │   ├── empty-state.tsx        the iOS-style empty screen: big gray icon, title, one sentence, optional blue button
+│   │   └── category-select.tsx    the category dropdown; saves the choice straight away (PATCH /api/transactions/[id]); takes a className for the in-row look
 │   ├── db/
 │   │   ├── schema.ts              defines the shape of every database table in TypeScript — this file is the single source of truth for what the database looks like
 │   │   └── index.ts               sets up the connection to the database that the rest of the app uses
@@ -94,6 +97,7 @@ JHub/
 │   │   ├── plaid-webhook-verify.ts confirms an incoming webhook request genuinely came from Plaid
 │   │   ├── web-push.ts            sends a push notification to one saved subscription
 │   │   ├── format-date.ts         formats dates the iOS way for lists ("Sep 12, 2026")
+│   │   ├── format-money.ts        formats a transaction's amount ("$12.34", money in as "+$500.00") and date ("Sep 12")
 │   │   ├── push-client.ts         browser-only helpers to turn this device's push notifications on/off (permission prompt, Web Push subscribe/unsubscribe, saving to /api/push/subscribe); used by notifications-section.tsx and sign-out-row.tsx
 │   │   ├── category-name.ts       server-only naming rules shared by category create and rename: trim + length check, and the case-insensitive "you already have that name" check
 │   │   ├── crypto.ts              encrypts/decrypts the Plaid access_token before it's stored (see Database below)
@@ -125,7 +129,7 @@ A component only runs in the *browser* instead when the file starts with `"use c
 hold on-screen state, or use browser-only features. Most of `src/components/` is a Client Component
 for exactly that reason: registering the service worker, opening Plaid's popup, saving a dropdown
 change. The exceptions are the presentation pieces with no interactivity of their own --
-`large-title.tsx`, `grouped-list.tsx` and `transaction-row.tsx` -- which work inside either kind,
+`large-title.tsx`, `grouped-list.tsx`, `nav-bar.tsx`, `empty-state.tsx` and the transaction rows -- which work inside either kind,
 and `recipes.ts` (not a component at all, just shared Tailwind class-name strings importable from
 either kind).
 

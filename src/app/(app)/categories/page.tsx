@@ -2,20 +2,18 @@ import { asc, count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, transactions } from "@/db/schema";
 import { auth } from "@/auth";
-import { CategoryCard } from "@/components/category-card";
-import { NewCategoryCard } from "@/components/new-category-card";
-import { LargeTitle } from "@/components/large-title";
-import { card, bodyText65 } from "@/components/recipes";
+import { CategoriesView } from "@/components/categories-view";
 
 // Re-run the queries on every visit instead of freezing the page at build
 // time, so counts stay current as transactions are sorted.
 export const dynamic = "force-dynamic";
 
-// The Categories list ("/categories"): a "+ New category" card first (the
-// only place categories get created -- new accounts start with none), then
-// one card per category you own, showing how many transactions are sorted
-// into it. Clicking a card opens /categories/[id], which lists those
-// transactions.
+// The Categories list ("/categories"): a large title with a "+" to create a
+// category (the only place categories get created -- new accounts start with
+// none), then one row per category you own with how many transactions are
+// sorted into it. Tapping a row opens /categories/[id]; swiping it left
+// deletes it after an "are you sure?". The interactive parts live in
+// CategoriesView; this page just loads the data.
 //
 // A "Server Component" (see ARCHITECTURE.md): it queries the database
 // directly. The proxy (src/proxy.ts) already guarantees you're logged in.
@@ -41,25 +39,5 @@ export default async function CategoriesPage() {
     .groupBy(categories.id, categories.name)
     .orderBy(asc(categories.name));
 
-  return (
-    <>
-      <LargeTitle>Categories</LargeTitle>
-
-      {rows.length === 0 && (
-        <div className={card}>
-          <p className={`text-sm ${bodyText65}`}>
-            No categories yet. Create one below to start sorting your transactions.
-          </p>
-        </div>
-      )}
-
-      {/* Cards wrap into as many columns as fit (docs/design/components.md) */}
-      <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
-        <NewCategoryCard />
-        {rows.map((row) => (
-          <CategoryCard key={row.id} id={row.id} name={row.name} total={row.total} />
-        ))}
-      </div>
-    </>
-  );
+  return <CategoriesView rows={rows} />;
 }

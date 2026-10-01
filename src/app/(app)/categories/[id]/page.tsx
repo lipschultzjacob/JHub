@@ -1,17 +1,22 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Receipt } from "lucide-react";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { transactions, plaidAccounts, plaidItems, categories } from "@/db/schema";
 import { auth } from "@/auth";
-import { TransactionRow } from "@/components/transaction-row";
-import { card, bodyText65, metaText45 } from "@/components/recipes";
+import { NavBar } from "@/components/nav-bar";
+import { ListSection } from "@/components/grouped-list";
+import { EmptyState } from "@/components/empty-state";
+import { TransactionListRow } from "@/components/transaction-list-row";
+import { RenameCategoryButton } from "@/components/rename-category-button";
 
 // Re-run the queries on every visit instead of freezing the page at build time.
 export const dynamic = "force-dynamic";
 
-// The detail page for one category ("/categories/3"): the transactions
-// already sorted into it, each with a dropdown so you can move it elsewhere.
+// The screen for one category ("/categories/3"), opened from the Categories
+// list. A pushed screen: "‹ Categories" back button, the category's name,
+// and a "Rename" button at the top; then the transactions already sorted
+// into it, each with a category dropdown so you can move it elsewhere.
 // (Once moved, it drops out of this list on the refresh that follows.)
 //
 // `params` holds the dynamic part of the URL (the "3"). In this Next.js
@@ -65,22 +70,26 @@ export default async function CategoryDetailPage({
 
   return (
     <>
-      <Link href="/categories" className={`text-sm hover:text-accent ${metaText45}`}>
-        ← Categories
-      </Link>
-      <h1 className="font-heading text-[40px]">{category.name}</h1>
+      <NavBar
+        title={category.name}
+        backHref="/categories"
+        backLabel="Categories"
+        action={<RenameCategoryButton id={category.id} name={category.name} />}
+      />
 
-      {rows.length === 0 && (
-        <div className={card}>
-          <p className={`text-sm ${bodyText65}`}>Nothing sorted into this category yet.</p>
-        </div>
+      {rows.length === 0 ? (
+        <EmptyState
+          icon={Receipt}
+          title="No Transactions"
+          message={`Nothing is sorted into ${category.name} yet.`}
+        />
+      ) : (
+        <ListSection>
+          {rows.map((row) => (
+            <TransactionListRow key={row.id} row={row} categories={allCategories} />
+          ))}
+        </ListSection>
       )}
-
-      <div className="flex flex-col">
-        {rows.map((row) => (
-          <TransactionRow key={row.id} row={row} categories={allCategories} />
-        ))}
-      </div>
     </>
   );
 }

@@ -9,15 +9,18 @@ type Category = { id: number; name: string };
 // The category dropdown shown next to each transaction. Saves your choice
 // straight to the database as soon as you change it -- this is the same
 // action the push notification's built-in category picker will eventually
-// reuse.
+// reuse. `className` replaces the default boxed look (e.g. the plain blue
+// text used inside iOS-style list rows).
 export function CategorySelect({
   transactionId,
   categoryId,
   categories,
+  className = inputBase,
 }: {
   transactionId: number;
   categoryId: number | null;
   categories: Category[];
+  className?: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -39,7 +42,8 @@ export function CategorySelect({
       value={categoryId ?? ""}
       onChange={(e) => handleChange(e.target.value)}
       disabled={isPending}
-      className={`${inputBase} disabled:opacity-45`}
+      aria-label="Category"
+      className={`${className} disabled:opacity-45`}
     >
       <option value="">Uncategorized</option>
       {categories.map((c) => (
