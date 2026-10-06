@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { formatMoney, formatShortDate } from "@/lib/format-money";
+import type { ReviewStatus } from "@/db/schema";
 
 export type DeckTransaction = {
   id: number;
@@ -12,9 +13,22 @@ export type DeckTransaction = {
   pending: boolean;
 };
 
+// Which way each decision goes: swiping left marks a transaction for
+// reimbursement, swiping right clears it.
+const SWIPE_LEFT: ReviewStatus = "reimburse";
+const SWIPE_RIGHT: ReviewStatus = "clear";
+// How each decision is shown: its name in the hint under the deck, and the
+// Undo banner's wording.
+const LABELS: Record<ReviewStatus, { name: string; banner: string }> = {
+  reimburse: { name: "Reimburse", banner: "Marked for reimbursement" },
+  clear: { name: "Clear", banner: "Cleared" },
+};
+
 // How far a finger has to move before we decide whether it's a sideways
 // swipe (ours) or an up/down move (ignored).
 const MOVE_TOLERANCE = 8;
+// How long the "Cleared · Undo" banner stays up.
+const UNDO_MS = 5000;
 // How long a card takes to fly off / settle back.
 const FLY_MS = 300;
 const SETTLE = "cubic-bezier(0.32, 0.72, 0, 1)";
@@ -24,40 +38,61 @@ const DEPTH_SCALE = 0.05;
 const DEPTH_DROP = 14; // px
 const CARD_RADIUS = 28;
 
-// Overview's deck of transaction cards, stacked like a real deck: swipe the
-// top card off to the left for the next one, swipe right to bring the
-// previous one back.
+// Overview's review deck: transactions you haven't reviewed yet, stacked
+// like a real deck of cards.
+// - Swipe the top card left to mark it for reimbursement, or right to clear
+//   it (nothing more to do). Either way it leaves the deck, and the next
+//   card comes up.
+// - The hint under the deck ("← Reimburse · Clear →") follows the drag: the
+//   side you're heading toward turns tinted and bold while the other fades,
+//   and it grows a little once letting go would commit.
+// - After each swipe, an "… · Undo" banner shows for a few seconds; Undo
+//   puts the card back on top.
 //
-// `emptyState` is shown when there are no cards. `initialTransactionId`
-// picks which card starts on top (used when opened from a notification).
+// `review` saves a transaction's status (null = back to unreviewed) and
+// returns an error message, or null on success. The card is hidden right
+// away and comes back if saving fails. `emptyState` is shown when no cards
+// are left. `initialTransactionId` picks which card starts on top (used
+// when opened from a notification).
 //
 // The card shapes, shadows and motion use inline styles on purpose: they
 // render the same everywhere, including on the iPhone, where some
 // class-based styles have come through differently.
 export function SortDeck({
   transactions,
+  review,
   emptyState,
   initialTransactionId,
 }: {
   transactions: DeckTransaction[];
+  review: (transactionId: number, status: ReviewStatus | null) => Promise<string | null>;
   emptyState: React.ReactNode;
   initialTransactionId?: number;
 }) {
+  // Transactions reviewed on this screen, hidden right away (and shown again
+  // if saving fails or Undo is tapped).
+  const [hiddenIds, setHiddenIds] = useState<number[]>([]);
+  const visible = transactions.filter((t) => !hiddenIds.includes(t.id));
+
   // Which card is on top. Starts on the notification's transaction when
-  // opened from one (/#transaction-<id>), otherwise the first.
+  // opened from one (/#transaction-<id>), otherwise the first. When the top
+  // card is swiped away, the one after it slides into the same position.
   const [index, setIndex] = useState(() =>
     Math.max(0, transactions.findIndex((t) => t.id === initialTransactionId))
   );
-  const current = Math.min(index, Math.max(0, transactions.length - 1));
+  const current = Math.min(index, Math.max(0, visible.length - 1));
 
   // "swiping": following a sideways drag.
   const [mode, setMode] = useState<"idle" | "swiping">("idle");
   const [dragX, setDragX] = useState(0);
-  // Set for the moment a card is flying off ("next") or the previous card
-  // is flying back on ("prev"), before the top card actually changes.
-  const [flying, setFlying] = useState<"next" | "prev" | null>(null);
+  // Set for the moment the top card is flying off to one side, before it's
+  // actually removed from the deck.
+  const [flying, setFlying] = useState<"left" | "right" | null>(null);
   const [deckWidth, setDeckWidth] = useState(360);
+  const [undo, setUndo] = useState<{ tx: DeckTransaction; status: ReviewStatus } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The touch in progress: where and when it started, and what it has
   // turned out to be ("pending" until it has moved far enough to tell).
   const gesture = useRef<{
@@ -68,16 +103,46 @@ export function SortDeck({
     kind: "pending" | "swipe" | "ignore";
   } | null>(null);
 
+  // Hides a card, shows the Undo banner, and saves its review status; brings
+  // the card back with an error if saving fails.
+  async function decide(tx: DeckTransaction, status: ReviewStatus) {
+    setError(null);
+    setHiddenIds((ids) => [...ids, tx.id]);
+    setUndo({ tx, status });
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    undoTimer.current = setTimeout(() => setUndo(null), UNDO_MS);
+    const problem = await review(tx.id, status);
+    if (problem) {
+      setHiddenIds((ids) => ids.filter((id) => id !== tx.id));
+      setUndo(null);
+      setError(problem);
+    }
+  }
+
+  // Undo: puts the last reviewed card back on top of the deck, in its
+  // original place in the order, and marks it unreviewed again.
+  async function undoLast() {
+    if (!undo) return;
+    const { tx } = undo;
+    setUndo(null);
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    const restored = transactions.filter((t) => t.id === tx.id || !hiddenIds.includes(t.id));
+    setHiddenIds((ids) => ids.filter((id) => id !== tx.id));
+    setIndex(restored.findIndex((t) => t.id === tx.id));
+    const problem = await review(tx.id, null);
+    if (problem) setError(problem);
+  }
+
   // Finger down on the deck: remember where and when. Nothing moves yet.
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    if (mode !== "idle" || flying || e.button !== 0 || transactions.length === 0) return;
+    if (mode !== "idle" || flying || e.button !== 0 || visible.length === 0) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     setDeckWidth(e.currentTarget.offsetWidth);
     gesture.current = { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp, kind: "pending" };
   }
 
   // Finger moving: a clear sideways move becomes a swipe (an up/down one is
-  // ignored). While swiping, the cards follow the finger.
+  // ignored). While swiping, the top card follows the finger.
   function handlePointerMove(e: React.PointerEvent) {
     const g = gesture.current;
     if (!g || e.pointerId !== g.id) return;
@@ -87,16 +152,11 @@ export function SortDeck({
       g.kind = Math.abs(dx) > Math.abs(dy) ? "swipe" : "ignore";
       if (g.kind === "swipe") setMode("swiping");
     }
-    if (g.kind === "swipe") {
-      // Resist when there's nothing to go to in that direction.
-      const blocked = (current === 0 && dx > 0) || (current === transactions.length - 1 && dx < 0);
-      setDragX(blocked ? dx * 0.3 : dx);
-    }
+    if (g.kind === "swipe") setDragX(dx);
   }
 
   // Finger up: a swipe that went far or fast enough flies the top card off
-  // (next) or brings the previous card back (prev), otherwise everything
-  // settles back.
+  // that side and records the decision; otherwise it settles back.
   function handlePointerEnd(e: React.PointerEvent) {
     const g = gesture.current;
     gesture.current = null;
@@ -106,12 +166,13 @@ export function SortDeck({
     if (g.kind === "swipe") {
       const dx = e.clientX - g.x;
       const speed = dx / Math.max(1, e.timeStamp - g.t); // px per ms
-      const goNext = released && current < transactions.length - 1 && (dx < -deckWidth * 0.25 || speed < -0.5);
-      const goPrev = released && current > 0 && (dx > deckWidth * 0.25 || speed > 0.5);
-      if (goNext || goPrev) {
-        setFlying(goNext ? "next" : "prev");
+      const goLeft = released && (dx < -deckWidth * 0.25 || speed < -0.5);
+      const goRight = released && (dx > deckWidth * 0.25 || speed > 0.5);
+      const tx = visible[current];
+      if (tx && (goLeft || goRight)) {
+        setFlying(goLeft ? "left" : "right");
         setTimeout(() => {
-          setIndex(current + (goNext ? 1 : -1));
+          decide(tx, goLeft ? SWIPE_LEFT : SWIPE_RIGHT);
           setFlying(null);
           setDragX(0);
         }, FLY_MS);
@@ -122,33 +183,23 @@ export function SortDeck({
     setMode("idle");
   }
 
-  // Where each card sits. `r` is its place relative to the top card (0 =
-  // top, 1 = just under it, -1 = the previous card, waiting off to the left).
-  // While swiping left the cards underneath rise toward the top (leftP goes
-  // 0 -> 1); while swiping right the previous card slides in over the top
-  // and the rest sink back a step (rightP).
-  const leftP = flying === "next" ? 1 : flying === "prev" ? 0 : Math.min(1, Math.max(0, -dragX / deckWidth));
-  const rightP = flying === "prev" ? 1 : flying === "next" ? 0 : Math.min(1, Math.max(0, dragX / deckWidth));
+  // How far along the current swipe is, 0 -> 1 (1 = a full card width, or
+  // the card flying off). The cards underneath rise toward the top as it
+  // grows.
+  const progress = flying ? 1 : Math.min(1, Math.abs(dragX) / deckWidth);
   const animate = mode !== "swiping";
+  // Where each card sits. `r` is its place relative to the top card (0 =
+  // top, 1 = just under it, ...).
   function cardPlacement(r: number): { style: React.CSSProperties; depth: number } {
     let x = "0px";
     let rotate = 0;
-    let depth = Math.max(0, r - leftP + (current > 0 ? rightP : 0));
-    let opacity = depth > 2.5 ? 0 : 1;
-    if (r === 0 && (dragX < 0 || flying === "next")) {
-      // The top card leaving to the left, tilting as it goes.
-      x = flying === "next" ? "-130%" : `${dragX}px`;
-      rotate = flying === "next" ? -14 : dragX * 0.04;
+    let depth = Math.max(0, r - progress);
+    if (r === 0) {
+      // The top card follows the finger, tilting as it goes, and flies off
+      // past the edge once a swipe commits.
+      x = flying === "left" ? "-130%" : flying === "right" ? "130%" : `${dragX}px`;
+      rotate = flying === "left" ? -14 : flying === "right" ? 14 : dragX * 0.04;
       depth = 0;
-    } else if (r === 0 && dragX > 0 && current === 0) {
-      x = `${dragX}px`; // nothing before it: just a little resistance
-      depth = 0;
-    } else if (r === -1) {
-      // The previous card, off to the left until you swipe right.
-      x = flying === "prev" ? "0px" : `calc(-130% + ${Math.max(0, dragX)}px)`;
-      rotate = flying === "prev" ? 0 : -14 * (1 - rightP);
-      depth = 0;
-      opacity = rightP > 0 || flying === "prev" ? 1 : 0;
     }
     const style: React.CSSProperties = {
       position: "absolute",
@@ -156,56 +207,105 @@ export function SortDeck({
       right: 0,
       bottom: 0,
       left: 0,
-      zIndex: r === -1 ? 20 : 10 - r,
+      zIndex: 10 - r,
       transform: `translateX(${x}) translateY(${depth * DEPTH_DROP}px) scale(${1 - depth * DEPTH_SCALE}) rotate(${rotate}deg)`,
       transformOrigin: "50% 100%",
-      opacity,
+      opacity: depth > 2.5 ? 0 : 1,
       transition: animate ? `transform ${FLY_MS}ms ${SETTLE}, opacity ${FLY_MS}ms` : "none",
     };
     return { style, depth };
   }
 
-  // The cards worth drawing: the previous one (waiting off to the left), the
-  // top one, and three underneath.
-  const drawn = transactions.map((t, i) => ({ t, r: i - current })).filter(({ r }) => r >= -1 && r <= 3);
+  // How far the drag has gone toward each side, 0 -> 1, reaching 1 at the
+  // commit distance (25% of the width). Drives the hint under the deck. (A
+  // fast flick can also commit before that -- the hint just shows the
+  // distance.)
+  const toward = (side: "left" | "right") =>
+    flying === side ? 1 : flying ? 0 : Math.min(1, Math.max(0, (side === "left" ? -dragX : dragX) / (deckWidth * 0.25)));
 
-  if (transactions.length === 0) return <>{emptyState}</>;
+  // The cards worth drawing: the top one and three underneath.
+  const drawn = visible.map((t, i) => ({ t, r: i - current })).filter(({ r }) => r >= 0 && r <= 3);
 
   return (
-    <div className="flex flex-col items-center gap-1.75">
-      {/* touch-action: none -- this area's touches are all ours, so the
-          browser never scrolls the page in the middle of a swipe. */}
-      <div
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerEnd}
-        onPointerCancel={handlePointerEnd}
-        onContextMenu={(e) => e.preventDefault()}
-        style={{
-          position: "relative",
-          width: "86%",
-          height: "clamp(300px, 50vh, 440px)",
-          marginBottom: DEPTH_DROP * 2,
-          touchAction: "none",
-          userSelect: "none",
-          WebkitUserSelect: "none",
-          WebkitTouchCallout: "none",
-        }}
-      >
-        {/* Drawn back to front, so the top card ends up on top. */}
-        {[...drawn].reverse().map(({ t, r }) => {
-          const { style, depth } = cardPlacement(r);
-          return (
-            <div key={t.id} style={style}>
-              <TransactionCard tx={t} depth={depth} animate={animate} />
-            </div>
-          );
-        })}
-      </div>
-      <p className="m-0 text-center text-footnote text-text-secondary">
-        {current + 1} of {transactions.length}
-      </p>
-    </div>
+    <>
+      {visible.length === 0 ? (
+        emptyState
+      ) : (
+        <div className="flex flex-col items-center gap-1.75">
+          {/* touch-action: none -- this area's touches are all ours, so the
+              browser never scrolls the page in the middle of a swipe. */}
+          <div
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerEnd}
+            onPointerCancel={handlePointerEnd}
+            onContextMenu={(e) => e.preventDefault()}
+            style={{
+              position: "relative",
+              width: "86%",
+              height: "clamp(300px, 50vh, 440px)",
+              marginBottom: DEPTH_DROP * 2,
+              touchAction: "none",
+              userSelect: "none",
+              WebkitUserSelect: "none",
+              WebkitTouchCallout: "none",
+            }}
+          >
+            {/* Drawn back to front, so the top card ends up on top. */}
+            {[...drawn].reverse().map(({ t, r }) => {
+              const { style, depth } = cardPlacement(r);
+              return (
+                <div key={t.id} style={style}>
+                  <TransactionCard tx={t} depth={depth} animate={animate} />
+                </div>
+              );
+            })}
+          </div>
+          <p className="m-0 text-center text-footnote text-text-secondary">
+            {visible.length} to review
+          </p>
+          <p className="m-0 flex items-center justify-center gap-1.5 text-footnote text-text-secondary">
+            <HintSide text={`← ${LABELS[SWIPE_LEFT].name}`} toward={toward("left")} away={toward("right")} animate={animate} />
+            <span style={{ opacity: 1 - 0.8 * Math.max(toward("left"), toward("right")) }}>·</span>
+            <HintSide text={`${LABELS[SWIPE_RIGHT].name} →`} toward={toward("right")} away={toward("left")} animate={animate} />
+          </p>
+          {error && <p className="m-0 text-center text-footnote text-red">{error}</p>}
+        </div>
+      )}
+
+      {/* "Marked for reimbursement · Undo", just above the tab bar. */}
+      {undo && (
+        <div
+          role="status"
+          style={{
+            position: "fixed",
+            left: 0,
+            right: 0,
+            bottom: "calc(var(--tab-bar-height) + env(safe-area-inset-bottom) + 12px)",
+            zIndex: 40,
+            display: "flex",
+            justifyContent: "center",
+            padding: "0 16px",
+            pointerEvents: "none",
+          }}
+        >
+          <div
+            className="flex w-full max-w-app items-center gap-2.5 pl-5"
+            style={{
+              pointerEvents: "auto",
+              borderRadius: 20,
+              background: "var(--color-surface-elevated)",
+              boxShadow: "var(--card-shadow)",
+            }}
+          >
+            <span className="flex-1 truncate text-subheadline">{LABELS[undo.status].banner}</span>
+            <button type="button" onClick={undoLast} className="min-h-12 px-5 text-body font-semibold text-accent active:opacity-60">
+              Undo
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -275,5 +375,40 @@ function TransactionCard({
         }}
       />
     </div>
+  );
+}
+
+// One side of the hint under the deck ("← Reimburse" or "Clear →").
+// `toward` is how far the drag has gone toward this side and `away` how far
+// toward the other, each 0 -> 1. Leaning this way, it turns tinted and bold,
+// and at the commit distance (1) it grows slightly; leaning the other way, it
+// fades out. A bold copy of the text is kept invisibly underneath, so
+// switching to bold doesn't make it wider and nudge the rest of the hint.
+function HintSide({
+  text,
+  toward,
+  away,
+  animate,
+}: {
+  text: string;
+  toward: number;
+  away: number;
+  animate: boolean;
+}) {
+  const leaning = toward > 0;
+  return (
+    <span
+      className={`inline-grid ${leaning ? "text-accent" : ""}`}
+      style={{
+        opacity: 1 - 0.8 * away,
+        transform: `scale(${toward >= 1 ? 1.15 : 1})`,
+        transition: `color 120ms, transform 160ms ${SETTLE}${animate ? `, opacity ${FLY_MS}ms` : ""}`,
+      }}
+    >
+      <span aria-hidden className="invisible col-start-1 row-start-1 font-semibold">
+        {text}
+      </span>
+      <span className={`col-start-1 row-start-1 text-center ${leaning ? "font-semibold" : ""}`}>{text}</span>
+    </span>
   );
 }

@@ -82,7 +82,7 @@ sentence, and an optional tinted button. Every list uses one of these when it's 
 
 ## Sort deck (Overview) — `src/components/sort-deck.tsx`
 
-`<SortDeck transactions={...} emptyState={...} initialTransactionId={...} />`
+`<SortDeck transactions={...} review={save} emptyState={...} initialTransactionId={...} />`
 (wired up by `overview-deck.tsx`). This is a custom interaction, tuned on the iPhone:
 
 - **Deck:** the top card, with up to 3 more behind it. Each step back is 5% smaller and 14px lower
@@ -91,11 +91,20 @@ sentence, and an optional tinted button. Every list uses one of these when it's 
   `--card-shadow` token (a soft shadow in Light; a faint light edge plus top highlight in Dark).
   The content is date · account (top), the amount (46px semibold, money in green "+"), the
   merchant (Title 3), and a soft "Pending" pill.
-- **Swipe:** left flies the top card off (tilting) to show the next; right brings the previous card
-  back on top. It commits past 25% of the width or on a fast flick, otherwise springs back. The
-  first/last card resists.
-- **No sorting gesture for now.** The hold-and-drag category grid was removed (see
-  docs/DECISIONS.md, 2026-10-05); a "N of M" count sits under the deck.
+- **Swipe:** left = **Reimburse**, right = **Clear**. The top card follows the finger (tilting) and
+  the cards behind rise a step. It commits past 25% of the width or on a fast flick and flies off
+  that side; otherwise it springs back.
+- **Direction feedback is the hint under the deck** ("← Reimburse · Clear →", Footnote,
+  secondary color). While dragging, the side you're heading toward turns tinted and semibold,
+  and the other side and the dot fade with the drag (down to 20%). At the commit distance the
+  active side grows to 115%. Everything settles back on release. An invisible semibold copy of
+  each side reserves its width, so the hint doesn't shift when the weight changes. The card
+  itself carries no label. (A tinted pill stamped on the card, and round icons at the screen
+  edges, were both tried and dropped.)
+- **After a swipe:** the card hides instantly, and the save runs in the background; on failure it
+  comes back with an error. A "Marked for reimbursement · Undo" / "Cleared · Undo" banner shows
+  above the tab bar for 5s; Undo puts the card back on top. Under the deck: "N to review" and a
+  "← Reimburse · Clear →" hint.
 - `touch-action: none`, no text selection, and no long-press callout on the deck, so the
   browser never scrolls or selects mid-gesture.
 - Shapes, shadows and motion are **inline styles**, which render the same on every iPhone (see

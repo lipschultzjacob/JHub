@@ -694,3 +694,37 @@ designed yet.
   still be set from a category's own screen.
 - Categories (the tab, the table, `PATCH /api/transactions/[id]`) are untouched for now. Whether
   they stay alongside reimbursement status or get replaced is a later decision.
+
+## 2026-10-05 — Overview deck: swipe left to reimburse, right to clear (issue #32)
+
+**Decision:** Each transaction now goes through a one-time review on Overview. Swiping its card
+**left** marks it **"reimburse"**, and swiping **right** marks it **"clear"**. Either way it leaves the
+deck. The result is stored in a new nullable column, `transactions.review_status`: empty means
+not reviewed yet (still in the deck), otherwise `'reimburse'` or `'clear'`. The deck holds every
+unreviewed transaction, whether or not it has a category. A 5-second Undo banner covers
+mis-swipes. Swiping no longer means next/back.
+
+**Why:** These were the user's choices. A separate column, rather than two special categories,
+keeps the reimbursement idea independent of categories, which may change or go away later. Undo
+is needed because a swipe is now a decision, not just navigation.
+
+**Tradeoffs:**
+- **The allowed values are checked by the API, not the database.** `review_status` is plain
+  `text`. Drizzle's `enum` option only constrains TypeScript, so `PATCH /api/transactions/[id]`
+  rejects anything other than `REVIEW_STATUSES` (exported from `src/db/schema.ts`). A Postgres
+  enum or a check constraint would also enforce it in the database, but it's harder to change
+  when a third status (e.g. "reimbursed") arrives.
+- **Direction feedback is deliberately quiet.** While dragging, only the hint under the deck
+  reacts: the side you're heading toward turns tinted and bold. A label stamped on the card and
+  round icons at the screen edges were both built and dropped as too much. There's no haptic
+  either: iOS has no vibration API for web apps, including Home Screen ones. A hidden-switch
+  trick can trigger one on iOS 18+, but it's unofficial and untested here.
+- **No way to skip a card.** You can't move past a card without deciding on it. Existing
+  transactions all start unreviewed, so the first visit is a backlog.
+- **Gotcha: the dev server needs a restart after a schema change.** `src/db/index.ts` keeps the
+  database client on `globalThis` so hot reloads don't open new connections. That client also
+  holds on to the *old* schema, so a new column is silently dropped from updates (Drizzle produced
+  `update "transactions" set  where …`) until `npm run dev` is restarted.
+- **Gotcha: `next start` locally talks to production.** Production mode loads
+  `.env.production.local`, so `npm run start` / `next start` on this machine uses the Neon
+  `DATABASE_URL`. Use `npm run dev` for local testing.

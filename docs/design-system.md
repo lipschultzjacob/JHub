@@ -113,9 +113,9 @@ white. All of these are starting values, to confirm on a real iPhone when the ap
 - **Empty state**: centered in the available space, with a large secondary-color icon, a Headline
   title, and one Subheadline sentence (plus a tinted button if there's an obvious next step).
 - **Overview's card deck** is the one deliberate custom (non-stock-iOS) interaction: a stack of
-  transaction cards you swipe through. Its exact behavior and styling are in
-  `docs/design/components.md` ("Sort deck"). It follows the same tokens: green for money in,
-  soft rounded cards.
+  transaction cards; swipe left to mark one for reimbursement, right to clear it. Its exact
+  behavior and styling are in `docs/design/components.md` ("Sort deck"). It follows the same
+  tokens: tint for the side of the swipe hint you're heading toward, green for money in, soft rounded cards.
 
 ## Motion
 

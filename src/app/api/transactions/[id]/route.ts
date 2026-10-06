@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { transactions, plaidAccounts, plaidItems, categories } from "@/db/schema";
+import { transactions, plaidAccounts, plaidItems, categories, REVIEW_STATUSES, type ReviewStatus } from "@/db/schema";
 import { auth } from "@/auth";
 
-// Sets (or clears, if categoryId is null) which budgeting category one
-// transaction belongs to. This is what the category dropdown on the
-// Overview and category pages calls when you pick a category, and later this is what
-// the push notification's built-in category picker will call too.
+// Updates one transaction. The request body can carry either field, or both:
+// - `categoryId`: which budgeting category it belongs to (null = none). The
+//   category dropdown on a category's screen sends this.
+// - `reviewStatus`: "reimburse" or "clear" from swiping its card on
+//   Overview, or null to put it back in the deck (Undo).
+// A field that's left out of the body is left unchanged.
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -19,7 +21,25 @@ export async function PATCH(
   const userId = Number(session.user.id);
 
   const { id } = await params;
-  const { categoryId } = await request.json();
+  const body = await request.json().catch(() => null);
+  if (typeof body !== "object" || body === null) {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+  const changes: { categoryId?: number | null; reviewStatus?: ReviewStatus | null } = {};
+
+  // Only accept a review status we know about (or null). The database column
+  // itself would take any text, so this check is what keeps it clean.
+  if ("reviewStatus" in body) {
+    const { reviewStatus } = body;
+    if (reviewStatus !== null && !REVIEW_STATUSES.includes(reviewStatus)) {
+      return NextResponse.json({ error: "Invalid review status" }, { status: 400 });
+    }
+    changes.reviewStatus = reviewStatus;
+  }
+  if ("categoryId" in body) changes.categoryId = body.categoryId;
+  if (Object.keys(changes).length === 0) {
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+  }
 
   // A transaction doesn't have its own userId column -- ownership is proven
   // by following the chain transaction -> account -> bank connection and
@@ -38,7 +58,8 @@ export async function PATCH(
 
   // Same idea for the category being assigned: make sure it's actually one
   // of this user's own categories, not someone else's.
-  if (categoryId !== null) {
+  if (changes.categoryId != null) {
+    const { categoryId } = changes;
     const [ownedCategory] = await db
       .select({ id: categories.id })
       .from(categories)
@@ -50,7 +71,7 @@ export async function PATCH(
 
   const [updated] = await db
     .update(transactions)
-    .set({ categoryId })
+    .set(changes)
     .where(eq(transactions.id, Number(id)))
     .returning();
 

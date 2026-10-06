@@ -16,6 +16,12 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 
+// The two outcomes of reviewing a transaction on Overview (see
+// transactions.reviewStatus below). Shared with the API route so both agree
+// on what's allowed.
+export const REVIEW_STATUSES = ["reimburse", "clear"] as const;
+export type ReviewStatus = (typeof REVIEW_STATUSES)[number];
+
 // One row per person who can log in. passwordHash is never the actual
 // password -- it's a scrambled, one-way version of it (created by bcrypt)
 // that can be checked against but never turned back into the real password,
@@ -133,6 +139,12 @@ export const transactions = pgTable("transactions", {
     onDelete: "set null",
   }),
   plaidCategory: text("plaid_category"), // Plaid's own suggested category, kept just as a reference/default
+  // What you decided when you swiped this transaction's card on Overview:
+  // "reimburse" (someone owes you for it) or "clear" (it's fine, nothing to
+  // do). Empty (null) means you haven't reviewed it yet, so it's still in
+  // the Overview deck. The `enum` list here is only checked by TypeScript,
+  // not by the database itself -- the API route validates incoming values.
+  reviewStatus: text("review_status", { enum: REVIEW_STATUSES }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

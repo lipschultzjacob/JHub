@@ -10,13 +10,13 @@ import { OverviewDeck } from "@/components/overview-deck";
 
 // Without this, Next.js would try to bake this page's data in once at build
 // time, freezing the list. This forces the database queries below to re-run
-// on every visit, so newly synced transactions and category changes show up.
+// on every visit, so newly synced transactions and review changes show up.
 export const dynamic = "force-dynamic";
 
-// The Overview screen ("/"): your transactions that don't have a category
-// yet, as a deck of cards to swipe through (OverviewDeck / SortDeck). Or,
-// when there's nothing to show, an empty state saying why: no bank connected
-// yet, or all caught up.
+// The Overview screen ("/"): the transactions you haven't reviewed yet, as a
+// deck of cards (OverviewDeck / SortDeck): swipe left to mark one for
+// reimbursement, right to clear it. Or, when there's nothing to show, an
+// empty state saying why: no bank connected yet, or all caught up.
 //
 // This is a "Server Component" (see ARCHITECTURE.md): it queries the database
 // directly on the server and hands the results to the deck, which runs in the
@@ -30,7 +30,7 @@ export default async function OverviewPage() {
   // state below).
   const items = await db.select({ id: plaidItems.id }).from(plaidItems).where(eq(plaidItems.userId, userId));
 
-  // This user's unsorted transactions (categoryId IS NULL), newest first, with
+  // This user's unreviewed transactions (reviewStatus IS NULL), newest first, with
   // each one's account name attached. The two inner joins also enforce
   // ownership: transactions don't store a user id, so we filter through
   // transactions -> plaidAccounts -> plaidItems.userId.
@@ -47,7 +47,7 @@ export default async function OverviewPage() {
     .from(transactions)
     .innerJoin(plaidAccounts, eq(transactions.plaidAccountId, plaidAccounts.id))
     .innerJoin(plaidItems, eq(plaidAccounts.plaidItemId, plaidItems.id))
-    .where(and(eq(plaidItems.userId, userId), isNull(transactions.categoryId)))
+    .where(and(eq(plaidItems.userId, userId), isNull(transactions.reviewStatus)))
     .orderBy(desc(transactions.date), desc(transactions.id));
 
   const linkButton = "min-h-11 inline-flex items-center text-body text-accent no-underline active:opacity-60";

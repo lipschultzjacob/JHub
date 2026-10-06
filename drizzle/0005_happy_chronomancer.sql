@@ -1,0 +1,1 @@
+ALTER TABLE "transactions" ADD COLUMN "review_status" text;

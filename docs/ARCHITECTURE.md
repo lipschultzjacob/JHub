@@ -38,7 +38,7 @@ JHub/
 │   │   ├── manifest.ts            describes the app for "install as an app" purposes, auto-served at /manifest.webmanifest
 │   │   ├── (app)/                a "route group" -- the "(app)" folder name is invisible in the URL, it exists only so these pages can share one extra layout.tsx (the bottom tab bar) without login/signup getting it too
 │   │   │   ├── layout.tsx          adds the iPhone-style bottom tab bar (`TabBar`) + content wrapper around every page below, as one centered phone-width column (430px max) with safe-area padding for the notch, and bottom padding so the last row can scroll up above the tab bar
-│   │   │   ├── page.tsx             the Overview screen, served at "/": loads your unsorted transactions (categoryId IS NULL, newest first) and hands them to `OverviewDeck`; or shows a "No Bank Connected" empty state (→ Settings) instead
+│   │   │   ├── page.tsx             the Overview screen, served at "/": loads the transactions you haven't reviewed yet (reviewStatus IS NULL, newest first) and hands them to `OverviewDeck`; or shows a "No Bank Connected" empty state (→ Settings) instead
 │   │   │   ├── categories/
 │   │   │   │   ├── page.tsx          the Categories list, served at "/categories": loads your categories with their transaction counts and hands them to `CategoriesView` (large title with a "+" that opens the New Category sheet -- the only place categories get created -- a row per category opening its screen, swipe left to delete after an "are you sure?", and a "No Categories" empty state)
 │   │   │   │   └── [id]/page.tsx     one category's screen ("/categories/3"): verifies the category belongs to the signed-in user (else 404), then shows a "‹ Categories" nav bar with a Rename button, and its transactions as list rows (`TransactionListRow`), each with a dropdown to re-sort it; "No Transactions" empty state
@@ -73,8 +73,8 @@ JHub/
 │   │   ├── confirm-alert.tsx      the centered iOS "are you sure?" alert (title, message, Cancel + red confirm side by side) used before destructive actions
 │   │   ├── sheet.tsx              the iOS sheet that slides up for creating/editing (Cancel / title / Save bar, form inside; leave out onSave for a pick-from-a-list sheet with no Save); stays above the iPhone keyboard; `primeKeyboard()` lets the opening tap bring the keyboard up
 │   │   ├── overlay.tsx            shared plumbing for sheet.tsx and confirm-alert.tsx: appear/disappear animation timing, page scroll lock, Escape to close, keyboard height, and a Portal that renders into <body>
-│   │   ├── sort-deck.tsx          Overview's card deck: unsorted transactions as a stack of cards (swipe left = next, right = back). It doesn't sort anything for now (the hold-and-drag category grid was removed; see DECISIONS.md)
-│   │   ├── overview-deck.tsx      wraps SortDeck: shows "All Caught Up" when there are no cards, and opens on the card from a notification link (/#transaction-<id>)
+│   │   ├── sort-deck.tsx          Overview's review deck: unreviewed transactions as a stack of cards. Swipe left = "Reimburse", right = "Clear"; either way the card leaves the deck (the "← Reimburse · Clear →" hint under the deck highlights the side you're dragging toward), with a 5-second "… · Undo" banner
+│   │   ├── overview-deck.tsx      connects SortDeck to the server (PATCH /api/transactions/[id] with `reviewStatus`; null on Undo), shows "All Caught Up", and opens on the card from a notification link (/#transaction-<id>)
 │   │   ├── sign-out-row.tsx       the red Sign Out row on Settings: asks "Sign Out?" first, then turns off push notifications on this device before signing out
 │   │   ├── disconnect-bank-row.tsx  the red Disconnect Bank row on a bank's screen: asks "Disconnect X?" (its transactions get deleted), calls DELETE /api/plaid/items/[id], then returns to Settings
 │   │   ├── connect-bank-row.tsx   the blue "Connect a Bank" row on Settings: fetches a link token, then opens Plaid's popup
@@ -203,8 +203,9 @@ Current tables:
   how far we've synced
 - `plaid_accounts` — the individual accounts (checking, savings, etc.) that belong to a connected
   bank
-- `transactions` — one row per transaction, linked to which account it came from and (optionally)
-  which category you assigned it
+- `transactions` — one row per transaction, linked to which account it came from, (optionally)
+  which category you assigned it, and its `review_status`: empty until you swipe its card on
+  Overview, then `reimburse` or `clear`
 - `push_subscriptions` — one row per browser/device that's agreed to receive push notifications for
   a user (someone could have several: phone, laptop, ...)
 - `login_attempts` — recent login/signup attempts, used to block a burst of them (see Login above)
@@ -246,8 +247,9 @@ one user's data is never visible or editable by another.
    `plaid_items` row -- cascading to its accounts and all their transactions, categorized or not.
    If Plaid's call fails the local row is kept so you can retry (unless Plaid says the item is
    already gone, which counts as success).
-6. The category dropdown on the category detail pages calls `PATCH /api/transactions/[id]` to save
-   which category you picked.
+6. `PATCH /api/transactions/[id]` saves changes to one transaction: the category dropdown on the
+   category detail pages sends `categoryId`, and swiping a card on Overview sends `reviewStatus`
+   (`null` on Undo). Fields left out of the request are left unchanged.
 
 ### Push notifications
 The actual "notify me the moment I spend money" feature. Three pieces:
