@@ -41,13 +41,13 @@ export function primeKeyboard() {
 // The iOS sheet: a panel that slides up from the bottom over a dimmed
 // screen, with a grabber, a top bar (Cancel on the left, a title, and Save on
 // the right), and whatever form fields you put inside. Used for creating and
-// editing things (New Category, Rename). Enter in a text box also saves.
+// editing things (e.g. naming something). Enter in a text box also saves.
 // The panel rises above the on-screen keyboard so its text box stays
 // visible. Leave out `onSave` for a sheet you just pick from (e.g. a list
 // of choices): it then has no Save button.
 //
 // Usage:
-//   <Sheet open={adding} title="New Category" onCancel={close} onSave={save}
+//   <Sheet open={adding} title="New Item" onCancel={close} onSave={save}
 //     saveDisabled={name.trim() === ""} saving={isPending}>
 //     ...fields...
 //   </Sheet>

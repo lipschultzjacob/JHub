@@ -50,15 +50,15 @@ Inside, a `max-w-app` row of 49px (`h-(--tab-bar-height)`). Each tab is a Link:
 `flex flex-1 flex-col items-center gap-0.5 pt-1.5 no-underline active:opacity-60`, `text-accent`
 when selected (`aria-current="page"`), otherwise `text-text-secondary`. It holds a Lucide icon
 (24px, stroke 1.75) over a `text-[10px] leading-3 font-medium` label. The icons are Inbox
-(Overview), Tags (Categories), and Settings.
+(Overview), ListTodo (To Do), and Settings.
 
 ## Large title — `src/components/large-title.tsx`
 
 `<LargeTitle>Settings</LargeTitle>` is an `<h1 className="m-0 text-large-title">` (34/41 bold) at
 the top of each tab's content. Pushed screens use the nav bar below instead.
 
-`action` puts a button at the far right, level with the title. For example, the Categories "+":
-a 44px tinted Lucide Plus (28px), `-mr-2.5` so the icon lines up with the screen edge.
+`action` puts a button at the far right, level with the title. For example, a "+": a 44px
+tinted Lucide Plus (28px), `-mr-2.5` so the icon lines up with the screen edge.
 
 ## Nav bar (pushed screens) — `src/components/nav-bar.tsx`
 
@@ -68,13 +68,13 @@ grid-cols-[1fr_auto_1fr]` row, `min-h-11`. On the left is a tinted Link (Lucide 
 + the label, `active:opacity-60`), and in the middle a truncated `text-headline` `<h1>`. The tab bar
 stays visible on pushed screens, and the parent tab stays selected.
 
-`action` fills the right column with a button. For example, a category's "Rename" is plain tinted
+`action` fills the right column with a button. For example, a "Rename" would be plain tinted
 `text-body` text (`min-h-11`, `active:opacity-60`).
 
 ## Empty state — `src/components/empty-state.tsx`
 
-`<EmptyState icon={Tags} title="No Categories" message="Create one to start sorting your
-transactions." action={<button className="min-h-11 text-body text-accent">New Category</button>} />`
+`<EmptyState icon={Landmark} title="No Bank Connected" message="Connect a bank to start pulling in
+your transactions." action={<Link href="/settings" className="min-h-11 text-body text-accent">Go to Settings</Link>} />`
 
 It's centered in the free space (`flex-1`, `py-16`), with a 48px Lucide icon in
 `text-text-secondary` (stroke 1.5), a `text-headline` title, a `text-subheadline` secondary
@@ -110,14 +110,32 @@ sentence, and an optional tinted button. Every list uses one of these when it's 
 - Shapes, shadows and motion are **inline styles**, which render the same on every iPhone (see
   docs/DECISIONS.md).
 
-## Transaction row (list) — `src/components/transaction-list-row.tsx`
+## To Do list — `src/components/todo-list.tsx`
 
-One transaction inside a `ListSection`. The left side is the merchant (`text-body`) over
-"Sep 12 · Checking" (`text-subheadline text-text-secondary`, prefixed "Pending · " if pending). The
-right side is the amount (`tabular-nums`; money in is `text-green` with a "+", via `formatMoney`)
-over the category dropdown, restyled as tinted `text-body` text with no box. It stays 17px so
-iPhone Safari doesn't zoom in when it's tapped, and tapping it opens Apple's picker wheel. The
-row keeps the `transaction-<id>` anchor for notification links.
+`<TodoList items={...} emptyState={...} />` (loaded by `src/app/(app)/todo/page.tsx`). One
+`ListSection` with a row per item:
+
+- **Row:** `min-h-11`, `py-1.5 pl-gutter pr-1.5` (the button's own padding makes up the right
+  edge), with the usual inset separator. The left side is the merchant (`text-body`) over
+  "Oct 3 · Checking" (`text-subheadline text-text-secondary`, prefixed "Pending · " if pending).
+  Then comes the amount (`text-body tabular-nums`; money in is `text-green` with a "+", via
+  `formatMoney`).
+- **Checkmark button** at the far right: a Lucide CircleCheck (26px, stroke 1.75) in `text-accent`
+  inside a `size-11` (44×44) button, `active:opacity-60`, labeled "Mark X as reimbursed" for
+  VoiceOver.
+- The rest of the row is **not tappable** (no pressed state) for now. It's reserved for opening
+  the transaction later.
+- **Pressing the checkmark** hides the row immediately and saves in the background. On failure the
+  row returns, with the error in red in the section footer. The Undo banner (below) shows
+  "Marked as reimbursed".
+
+## Undo banner — `src/components/undo-banner.tsx`
+
+`{undo && <UndoBanner message="Cleared" onUndo={undoLast} />}`. A floating bar fixed just above
+the tab bar (`bottom: tab bar height + safe area + 12px`), full app width with a 16px side margin,
+20px corners, `--color-surface-elevated` and `--card-shadow`. The message is `text-subheadline`
+(truncated), followed by a semibold tinted "Undo" button (`min-h-12`). Only the bar itself catches
+taps. The screen using it owns the 5-second timer.
 
 ## Switch — `src/components/switch.tsx`
 
@@ -134,7 +152,6 @@ the reason in the section footer.
 ```tsx
 <ListSection header="Connected banks" footer="Last synced a minute ago.">
   <ListRow title="Chase" subtitle="Connected 2026-09-12" chevron href="/settings/banks/1" />
-  <ListRow title="Groceries" value="12" chevron href="/categories/3" />
   <ListRow title="Connect a Bank" tone="tint" onClick={connect} />
 </ListSection>
 <ListSection>
@@ -153,11 +170,13 @@ the reason in the section footer.
   not-last:after:left-(--gutter) not-last:after:h-0 not-last:after:border-b-[0.5px]
   not-last:after:border-separator`.
 - Tones: `default` (`text-text`), `tint` (`text-accent`, action rows), `destructive` (`text-red`).
-- `accessory` holds anything else on the right: a switch, a dropdown.
+- `accessory` holds anything else on the right: a switch, a button.
 - The pressed color is `active:bg-(--row-pressed)`. It's a variable (normally the fill-pressed
   color) so a swipeable row can switch it off mid-swipe.
 
 ## Swipe to delete — `src/components/swipe-row.tsx`
+
+Not used by any screen right now. The example below is from the old Categories list.
 
 ```tsx
 <ListSection>
@@ -199,6 +218,8 @@ styles). Tapping the dimmed area does nothing (as in iOS); Escape cancels. It ke
 last title/message while fading out, so clearing the caller's state doesn't blank it mid-fade.
 
 ## Sheet — `src/components/sheet.tsx`
+
+Not used by any screen right now. The example below is from the old Categories list.
 
 ```tsx
 <ListRow title="New Category..." tone="tint"

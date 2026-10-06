@@ -43,6 +43,13 @@
       "when": 1791256724402,
       "tag": "0005_happy_chronomancer",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791259981060,
+      "tag": "0006_quiet_bullseye",
+      "breakpoints": true
     }
   ]
 }

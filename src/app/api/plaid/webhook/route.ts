@@ -76,7 +76,7 @@ async function notifyUser(userId: number, newTransactions: NewTransaction[]) {
       : [
           {
             title: `${newTransactions.length} new transactions`,
-            body: "Tap to review and categorize",
+            body: "Tap to review",
             url: "/",
           },
         ];

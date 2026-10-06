@@ -1,6 +1,6 @@
 import { TabBar } from "@/components/tab-bar";
 
-// Shared shell for every signed-in page (Overview, Categories, Settings):
+// Shared shell for every signed-in page (Overview, To Do, Settings):
 // the page content plus the iPhone-style tab bar fixed to the bottom, in
 // one place instead of repeated per page. Content sits in one phone-width
 // column (max-w-app, 430px): JHub is designed as an iPhone app, and on a

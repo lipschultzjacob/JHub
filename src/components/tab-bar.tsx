@@ -2,19 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Inbox, Settings, Tags, type LucideIcon } from "lucide-react";
+import { Inbox, ListTodo, Settings, type LucideIcon } from "lucide-react";
 
 type Tab = { href: string; label: string; icon: LucideIcon };
 
 const tabs: Tab[] = [
   { href: "/", label: "Overview", icon: Inbox },
-  { href: "/categories", label: "Categories", icon: Tags },
+  { href: "/todo", label: "To Do", icon: ListTodo },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 // True if this tab should show as selected for the current page. Overview
 // ("/") only matches exactly; the others also match their sub-pages, so
-// Categories stays selected on a category's detail page (/categories/3).
+// Settings stays selected on a bank's screen (/settings/banks/3).
 function isSelected(tabHref: string, pathname: string): boolean {
   if (tabHref === "/") return pathname === "/";
   return pathname === tabHref || pathname.startsWith(`${tabHref}/`);

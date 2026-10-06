@@ -38,8 +38,6 @@ export async function POST(request: Request) {
   // checking it is.
   const passwordHash = await bcrypt.hash(password, 10);
 
-  // New accounts start with no categories -- you create your own on the
-  // Categories screen.
   try {
     await db.insert(users).values({ email, passwordHash });
   } catch (err) {

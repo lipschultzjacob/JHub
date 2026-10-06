@@ -743,3 +743,32 @@ anyone with the address could create an account.
   the current code.
 - The Neon database and any Plaid connections stored in it stay in place. If a real bank was
   connected there, Plaid still considers that connection active until it's removed.
+
+## 2026-10-06 — Categories tab replaced by a reimbursement To Do list (issue #33)
+
+**Decision:** The Categories tab is now **To Do** (`/todo`). It lists every transaction marked
+"reimburse" on Overview that hasn't been taken care of yet. Each row has a **checkmark button on
+the right**. Pressing it records a new `transactions.reimbursed_at` timestamp, and the row leaves
+the list with a 5-second Undo banner. All category screens, API routes, components and helpers
+were deleted. The `categories` table and `transactions.category_id` were **kept** in the database,
+unused.
+
+**Why:** These were the user's choices. Categories had no role left after the refocus. A timestamp,
+rather than a third `review_status` value, records *when* something was paid back, which a
+history view can use later. It also keeps `review_status` meaning "what you decided on the deck."
+The button is on the right because the user wants to keep the row's left side free for tapping
+into a transaction later. Keeping the category data avoids a destructive migration for no gain.
+
+**Tradeoffs:**
+- **The server sets the time.** `PATCH /api/transactions/[id]` takes `reimbursed: true/false`,
+  not a date, so a phone with the wrong clock can't skew it. It also refuses to mark a transaction
+  reimbursed unless it's a "reimburse" one.
+- **Unused tables and components linger.** `categories`, `category_id`, `Sheet` and
+  `SwipeToDelete` remain with no users. The two components are general-purpose and likely to be
+  reused; dropping the table and column can be a later cleanup.
+- **Known gap (not fixed here; issue #34):** when a pending transaction posts, Plaid removes the pending one
+  and adds the posted one as a new transaction. A pending charge you swiped "reimburse" therefore
+  disappears from To Do, and its posted version comes back to the Overview deck unreviewed.
+  Carrying the decision over (via Plaid's `pending_transaction_id`) would fix it.
+- The shared "… · Undo" banner was pulled out of the deck into `undo-banner.tsx` so both screens
+  use the same one.

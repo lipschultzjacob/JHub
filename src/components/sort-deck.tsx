@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { formatMoney, formatShortDate } from "@/lib/format-money";
+import { UndoBanner } from "@/components/undo-banner";
 import type { ReviewStatus } from "@/db/schema";
 
 export type DeckTransaction = {
@@ -274,37 +275,7 @@ export function SortDeck({
       )}
 
       {/* "Marked for reimbursement · Undo", just above the tab bar. */}
-      {undo && (
-        <div
-          role="status"
-          style={{
-            position: "fixed",
-            left: 0,
-            right: 0,
-            bottom: "calc(var(--tab-bar-height) + env(safe-area-inset-bottom) + 12px)",
-            zIndex: 40,
-            display: "flex",
-            justifyContent: "center",
-            padding: "0 16px",
-            pointerEvents: "none",
-          }}
-        >
-          <div
-            className="flex w-full max-w-app items-center gap-2.5 pl-5"
-            style={{
-              pointerEvents: "auto",
-              borderRadius: 20,
-              background: "var(--color-surface-elevated)",
-              boxShadow: "var(--card-shadow)",
-            }}
-          >
-            <span className="flex-1 truncate text-subheadline">{LABELS[undo.status].banner}</span>
-            <button type="button" onClick={undoLast} className="min-h-12 px-5 text-body font-semibold text-accent active:opacity-60">
-              Undo
-            </button>
-          </div>
-        </div>
-      )}
+      {undo && <UndoBanner message={LABELS[undo.status].banner} onUndo={undoLast} />}
     </>
   );
 }

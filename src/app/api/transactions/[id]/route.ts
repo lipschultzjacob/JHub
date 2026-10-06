@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { transactions, plaidAccounts, plaidItems, categories, REVIEW_STATUSES, type ReviewStatus } from "@/db/schema";
+import { transactions, plaidAccounts, plaidItems, REVIEW_STATUSES, type ReviewStatus } from "@/db/schema";
 import { auth } from "@/auth";
 
 // Updates one transaction. The request body can carry either field, or both:
-// - `categoryId`: which budgeting category it belongs to (null = none). The
-//   category dropdown on a category's screen sends this.
 // - `reviewStatus`: "reimburse" or "clear" from swiping its card on
 //   Overview, or null to put it back in the deck (Undo).
+// - `reimbursed`: true when its checkmark is pressed on the To Do screen
+//   (records the current time as reimbursedAt), or false to put it back on
+//   the list (Undo). Only a "reimburse" transaction can be marked reimbursed.
 // A field that's left out of the body is left unchanged.
 export async function PATCH(
   request: Request,
@@ -25,7 +26,7 @@ export async function PATCH(
   if (typeof body !== "object" || body === null) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
-  const changes: { categoryId?: number | null; reviewStatus?: ReviewStatus | null } = {};
+  const changes: { reviewStatus?: ReviewStatus | null; reimbursedAt?: Date | null } = {};
 
   // Only accept a review status we know about (or null). The database column
   // itself would take any text, so this check is what keeps it clean.
@@ -36,7 +37,14 @@ export async function PATCH(
     }
     changes.reviewStatus = reviewStatus;
   }
-  if ("categoryId" in body) changes.categoryId = body.categoryId;
+  // The time comes from the server's clock, not the browser, so it can't be
+  // faked or thrown off by a phone with the wrong time.
+  if ("reimbursed" in body) {
+    if (typeof body.reimbursed !== "boolean") {
+      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    }
+    changes.reimbursedAt = body.reimbursed ? new Date() : null;
+  }
   if (Object.keys(changes).length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
@@ -46,7 +54,7 @@ export async function PATCH(
   // checking that chain ends at this user. Without this check, anyone
   // logged in could edit anyone else's transaction just by guessing an ID.
   const [owned] = await db
-    .select({ id: transactions.id })
+    .select({ id: transactions.id, reviewStatus: transactions.reviewStatus })
     .from(transactions)
     .innerJoin(plaidAccounts, eq(transactions.plaidAccountId, plaidAccounts.id))
     .innerJoin(plaidItems, eq(plaidAccounts.plaidItemId, plaidItems.id))
@@ -56,17 +64,12 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Same idea for the category being assigned: make sure it's actually one
-  // of this user's own categories, not someone else's.
-  if (changes.categoryId != null) {
-    const { categoryId } = changes;
-    const [ownedCategory] = await db
-      .select({ id: categories.id })
-      .from(categories)
-      .where(and(eq(categories.id, categoryId), eq(categories.userId, userId)));
-    if (!ownedCategory) {
-      return NextResponse.json({ error: "Invalid category" }, { status: 400 });
-    }
+  // Marking something reimbursed only makes sense if it was marked
+  // "reimburse" in the first place (counting a status change in this same
+  // request).
+  const statusAfter = "reviewStatus" in changes ? changes.reviewStatus : owned.reviewStatus;
+  if (changes.reimbursedAt && statusAfter !== "reimburse") {
+    return NextResponse.json({ error: "This transaction isn't marked for reimbursement" }, { status: 400 });
   }
 
   const [updated] = await db

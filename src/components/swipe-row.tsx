@@ -15,7 +15,7 @@ const DECIDE_DISTANCE = 8;
 
 // Wraps one ListRow so it can be swiped left to delete it:
 //   <SwipeToDelete onDelete={() => setConfirming(item)} held={confirming?.id === item.id}>
-//     <ListRow title="Groceries" chevron href="/categories/3" />
+//     <ListRow title="Groceries" chevron href="/somewhere" />
 //   </SwipeToDelete>
 // As you swipe, a red panel with a trash can grows in from the right. Let go
 // past the threshold (the trash can turns fully solid) and onDelete runs --

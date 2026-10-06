@@ -11,7 +11,7 @@ import { plaidClient } from "@/lib/plaid";
 // own saved copy. Skipping the Plaid step would leave the credential live at
 // Plaid even though we'd forgotten about it. Deleting our row automatically
 // deletes that bank's accounts and their transactions too ("cascade" -- see
-// src/db/schema.ts), including any you'd already categorized.
+// src/db/schema.ts), including any you'd already reviewed.
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }

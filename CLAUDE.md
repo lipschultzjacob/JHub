@@ -72,7 +72,7 @@ detail in docs/ARCHITECTURE.md; the load-bearing points for making changes corre
   third-party push service). `src/lib/plaid-webhook-verify.ts` must successfully verify Plaid's
   signed JWT before a webhook request is trusted — never bypass this. `public/sw.js` is the service
   worker that actually receives and displays notifications.
-- **Multi-tenancy**: `categories` and `plaid_items` carry `user_id` directly; `plaid_accounts` and
+- **Multi-tenancy**: `plaid_items` (and the no-longer-used `categories`) carry `user_id` directly; `plaid_accounts` and
   `transactions` don't repeat it — ownership is found by joining down to `plaid_items`. Every query
   that touches this data must filter (or verify ownership) through that chain.
 - **Deployment**: Vercel (app) + Neon (production Postgres). **Production is currently offline**

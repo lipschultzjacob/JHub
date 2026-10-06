@@ -49,6 +49,11 @@ export const loginAttempts = pgTable("login_attempts", {
   windowStart: timestamp("window_start").notNull().defaultNow(),
 });
 
+// NO LONGER USED BY THE APP (since the reimbursement refocus, issue #33):
+// nothing reads or writes this table anymore. It's kept, along with
+// transactions.categoryId, so no existing data is lost; dropping both is a
+// possible later cleanup.
+//
 // Budgeting categories you sort transactions into (e.g. "Groceries", "Rent").
 // Each belongs to one user, so different people can have entirely different
 // sets of categories. The `unique` line below means a name only has to be
@@ -132,9 +137,9 @@ export const transactions = pgTable("transactions", {
   name: text("name").notNull(), // Plaid's raw description of the transaction, always present even when merchantName isn't
   date: date("date").notNull(),
   pending: boolean("pending").notNull().default(false),
-  // The category you've assigned for your own budgeting. Stays empty
-  // (null) until you pick one -- e.g. from the push notification once that
-  // feature exists.
+  // The category you'd assigned for your own budgeting. No longer used by
+  // the app (see the note on `categories` above); kept so existing data
+  // isn't lost.
   categoryId: integer("category_id").references(() => categories.id, {
     onDelete: "set null",
   }),
@@ -145,6 +150,10 @@ export const transactions = pgTable("transactions", {
   // the Overview deck. The `enum` list here is only checked by TypeScript,
   // not by the database itself -- the API route validates incoming values.
   reviewStatus: text("review_status", { enum: REVIEW_STATUSES }),
+  // When you checked a "reimburse" transaction off on the To Do screen
+  // (i.e. you got paid back). Empty (null) means it's still on the to-do
+  // list. Set by the server, never sent by the browser.
+  reimbursedAt: timestamp("reimbursed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -2,7 +2,7 @@ import type { LucideIcon } from "lucide-react";
 
 // What a screen shows when its list is empty, iOS style: centered in the
 // space, a large gray icon, a bold title, one sentence, and optionally a
-// blue button for the obvious next step (e.g. "New Category"). The design
+// blue button for the obvious next step (e.g. "Go to Settings"). The design
 // system requires every list to have one of these instead of a blank screen.
 export function EmptyState({
   icon: Icon,

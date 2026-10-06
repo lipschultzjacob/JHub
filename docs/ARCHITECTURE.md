@@ -18,7 +18,7 @@ explained the first time they show up.
 | Language       | TypeScript (JavaScript with type-checking added — catches whole categories of bugs before the code even runs), used for both the browser-facing code and the server code |
 | Framework      | Next.js — a toolkit that handles both the pages you see and the backend logic in one project, so there's no separate "frontend app" and "backend app" to keep in sync |
 | Styling        | Tailwind CSS — write styling directly as class names on elements instead of separate `.css` files. UI must follow the design system in `docs/design-system.md`/`docs/design/` (tokens live in `src/app/globals.css`, each with a Light and a Dark value that follows the phone's setting) |
-| Database       | PostgreSQL (Postgres for short) — where all persistent data (transactions, categories, etc.) is stored |
+| Database       | PostgreSQL (Postgres for short) — where all persistent data (accounts, transactions, etc.) is stored |
 | ORM            | Drizzle — a library that lets us describe and query the database using TypeScript instead of writing raw SQL by hand ("ORM" = Object-Relational Mapper, the general name for this kind of tool) |
 | Auth           | Auth.js (NextAuth) — a login/session library, using email+password and encrypted-cookie ("JWT") sessions |
 | Bank data      | Plaid — a service that connects to your bank on our behalf and hands us transaction data, without us ever seeing your bank password |
@@ -39,9 +39,7 @@ JHub/
 │   │   ├── (app)/                a "route group" -- the "(app)" folder name is invisible in the URL, it exists only so these pages can share one extra layout.tsx (the bottom tab bar) without login/signup getting it too
 │   │   │   ├── layout.tsx          adds the iPhone-style bottom tab bar (`TabBar`) + content wrapper around every page below, as one centered phone-width column (430px max) with safe-area padding for the notch, and bottom padding so the last row can scroll up above the tab bar
 │   │   │   ├── page.tsx             the Overview screen, served at "/": loads the transactions you haven't reviewed yet (reviewStatus IS NULL, newest first) and hands them to `OverviewDeck`; or shows a "No Bank Connected" empty state (→ Settings) instead
-│   │   │   ├── categories/
-│   │   │   │   ├── page.tsx          the Categories list, served at "/categories": loads your categories with their transaction counts and hands them to `CategoriesView` (large title with a "+" that opens the New Category sheet -- the only place categories get created -- a row per category opening its screen, swipe left to delete after an "are you sure?", and a "No Categories" empty state)
-│   │   │   │   └── [id]/page.tsx     one category's screen ("/categories/3"): verifies the category belongs to the signed-in user (else 404), then shows a "‹ Categories" nav bar with a Rename button, and its transactions as list rows (`TransactionListRow`), each with a dropdown to re-sort it; "No Transactions" empty state
+│   │   │   ├── todo/page.tsx       the To Do screen, served at "/todo": loads your "reimburse" transactions that haven't been marked reimbursed yet (reviewStatus = 'reimburse' AND reimbursedAt IS NULL, newest first) and hands them to `TodoList`; "Nothing to Reimburse" empty state
 │   │   │   └── settings/
 │   │   │       ├── page.tsx          the Settings screen, served at "/settings", as iOS grouped sections: Connected Banks (a row per bank, opening its screen, plus "Connect a Bank"), Sync Now, Notifications (on/off switch for this device), Account (your email + Sign Out, which confirms first)
 │   │   │       └── banks/[id]/page.tsx  one bank's screen ("/settings/banks/3"): verifies the bank belongs to the signed-in user (else 404), then shows a "‹ Settings" nav bar, the bank's accounts (name, "Checking ••0000"), when it was connected, and a red Disconnect Bank row
@@ -59,22 +57,22 @@ JHub/
 │   │       │   └── webhook/       Plaid calls this automatically the moment a new transaction happens
 │   │       ├── push/
 │   │       │   └── subscribe/     saves/removes a browser's push notification subscription
-│   │       ├── categories/        POST creates a category for you (same name rules as rename below)
-│   │       ├── categories/[id]/   PATCH renames one category (trimmed, 1-40 chars, no case-insensitive duplicate among your own categories; 404 if it isn't yours); DELETE removes it (its transactions become unsorted, via the schema's "on delete set null")
-│   │       └── transactions/[id]/ lets the frontend set which category a transaction belongs to
+│   │       └── transactions/[id]/ PATCH updates one transaction: `reviewStatus` (Overview's swipes) and/or `reimbursed` (To Do's checkmark; the server records the time)
 │   ├── components/               Interactive pieces of the UI (buttons, dropdowns) that run in the browser
 │   │   ├── service-worker-registration.tsx
 │   │   ├── auth-session-provider.tsx  makes the current login session available throughout the app
 │   │   ├── touch-active-states.tsx  adds the empty touch listener iPhone Safari needs before it shows pressed-state (`active:`) styles; rendered once in the root layout
-│   │   ├── tab-bar.tsx            the bottom tab bar (Overview, Categories, Settings) on every signed-in page: Lucide icon + label per tab, current one tinted (a Client Component, since only the browser knows the current URL)
+│   │   ├── tab-bar.tsx            the bottom tab bar (Overview, To Do, Settings) on every signed-in page: Lucide icon + label per tab, current one tinted (a Client Component, since only the browser knows the current URL)
 │   │   ├── large-title.tsx        a screen's 34px "Large Title" heading, iOS-style
 │   │   ├── grouped-list.tsx       the iOS grouped inset list: `ListSection` (a rounded block of rows with optional header/footer) and `ListRow` (44px+ row: title, subtitle, value, accessory, chevron; a link or button when given href/onClick)
-│   │   ├── swipe-row.tsx          `SwipeToDelete`: wraps a ListRow so swiping it left grows a red trash-can panel; letting go past the threshold calls onDelete (which opens the ConfirmAlert), otherwise it springs back; vertical scrolling untouched
+│   │   ├── swipe-row.tsx          `SwipeToDelete`: wraps a ListRow so swiping it left grows a red trash-can panel; letting go past the threshold calls onDelete (which opens the ConfirmAlert), otherwise it springs back; vertical scrolling untouched. Not used by any screen right now (its only user was the Categories list), kept as a ready-made piece
 │   │   ├── confirm-alert.tsx      the centered iOS "are you sure?" alert (title, message, Cancel + red confirm side by side) used before destructive actions
-│   │   ├── sheet.tsx              the iOS sheet that slides up for creating/editing (Cancel / title / Save bar, form inside; leave out onSave for a pick-from-a-list sheet with no Save); stays above the iPhone keyboard; `primeKeyboard()` lets the opening tap bring the keyboard up
+│   │   ├── sheet.tsx              the iOS sheet that slides up for creating/editing (Cancel / title / Save bar, form inside; leave out onSave for a pick-from-a-list sheet with no Save); stays above the iPhone keyboard; `primeKeyboard()` lets the opening tap bring the keyboard up. Not used by any screen right now, kept as a ready-made piece
 │   │   ├── overlay.tsx            shared plumbing for sheet.tsx and confirm-alert.tsx: appear/disappear animation timing, page scroll lock, Escape to close, keyboard height, and a Portal that renders into <body>
 │   │   ├── sort-deck.tsx          Overview's review deck: unreviewed transactions as a stack of cards. Swipe left = "Reimburse", right = "Clear"; either way the card leaves the deck (the "← Reimburse · Clear →" hint under the deck highlights the side you're dragging toward), with a 5-second "… · Undo" banner
 │   │   ├── overview-deck.tsx      connects SortDeck to the server (PATCH /api/transactions/[id] with `reviewStatus`; null on Undo), shows "All Caught Up", and opens on the card from a notification link (/#transaction-<id>)
+│   │   ├── todo-list.tsx          the interactive part of To Do: one row per item (merchant, "Oct 3 · Checking", amount) with a checkmark button on the right that marks it reimbursed (PATCH /api/transactions/[id] with `reimbursed`); the row disappears with a 5-second Undo banner. The rest of the row isn't tappable yet (reserved for opening a transaction later)
+│   │   ├── undo-banner.tsx        the "… · Undo" banner floating above the tab bar, shared by the Overview deck and To Do
 │   │   ├── sign-out-row.tsx       the red Sign Out row on Settings: asks "Sign Out?" first, then turns off push notifications on this device before signing out
 │   │   ├── disconnect-bank-row.tsx  the red Disconnect Bank row on a bank's screen: asks "Disconnect X?" (its transactions get deleted), calls DELETE /api/plaid/items/[id], then returns to Settings
 │   │   ├── connect-bank-row.tsx   the blue "Connect a Bank" row on Settings: fetches a link token, then opens Plaid's popup
@@ -82,13 +80,8 @@ JHub/
 │   │   ├── notifications-section.tsx  the Notifications section on Settings: an iOS switch for this device (grayed out, with the reason, if this browser can't do push, has blocked it, or is the dev build)
 │   │   ├── switch.tsx             the iOS on/off switch, for a ListRow's accessory slot
 │   │   ├── nav-bar.tsx            the top bar of a pushed screen: tinted "‹ Back" link + centered title
-│   │   ├── categories-view.tsx    the interactive part of the Categories list: "+" button, category rows with swipe-to-delete + confirm alert, New Category sheet, empty state
-│   │   ├── category-name-sheet.tsx  the sheet for typing a category name, shared by New Category and Rename (shows the server's error, e.g. a duplicate name, inside the sheet)
-│   │   ├── rename-category-button.tsx  the "Rename" button in a category screen's nav bar; opens the name sheet prefilled
-│   │   ├── transaction-list-row.tsx  one transaction as an iOS list row: merchant, "Sep 12 · Checking", amount (money in green with "+"), and its category as a blue dropdown
 │   │   ├── empty-state.tsx        the iOS-style empty screen: big gray icon, title, one sentence, optional blue button
-│   │   ├── auth-form.tsx          shared pieces of the Log In / Sign Up screens: AuthScreen (icon + title layout), AuthFields/AuthField (grouped input rows), AuthButton
-│   │   └── category-select.tsx    the category dropdown; saves the choice straight away (PATCH /api/transactions/[id]); takes a className for the in-row look
+│   │   └── auth-form.tsx          shared pieces of the Log In / Sign Up screens: AuthScreen (icon + title layout), AuthFields/AuthField (grouped input rows), AuthButton
 │   ├── db/
 │   │   ├── schema.ts              defines the shape of every database table in TypeScript — this file is the single source of truth for what the database looks like
 │   │   └── index.ts               sets up the connection to the database that the rest of the app uses
@@ -100,7 +93,6 @@ JHub/
 │   │   ├── format-date.ts         formats dates the iOS way for lists ("Sep 12, 2026")
 │   │   ├── format-money.ts        formats a transaction's amount ("$12.34", money in as "+$500.00") and date ("Sep 12")
 │   │   ├── push-client.ts         browser-only helpers to turn this device's push notifications on/off (permission prompt, Web Push subscribe/unsubscribe, saving to /api/push/subscribe); used by notifications-section.tsx and sign-out-row.tsx
-│   │   ├── category-name.ts       server-only naming rules shared by category create and rename: trim + length check, and the case-insensitive "you already have that name" check
 │   │   ├── crypto.ts              encrypts/decrypts the Plaid access_token before it's stored (see Database below)
 │   │   └── rate-limit.ts          blocks repeated login/signup attempts past a threshold (see Login below)
 │   ├── types/
@@ -168,7 +160,7 @@ Logging in uses Auth.js's "Credentials" provider (a plain email+password form) -
 `src/auth.ts` contains the actual logic that checks a typed-in password against the scrambled
 version stored in the `users` table (see Database below). Auth.js doesn't handle creating new
 accounts itself, only logging in, so `POST /api/auth/signup` is a small custom-written endpoint
-that creates the account (with no categories -- you create your own on the Categories screen) before immediately logging it in.
+that creates the account before immediately logging it in.
 
 Sessions use the "JWT" strategy: your logged-in state lives in an encrypted browser cookie rather
 than a database row, which is simpler to set up but means there's no way to remotely force one
@@ -195,22 +187,23 @@ change to the actual database). Never hand-edit the generated migration files.
 Current tables:
 - `users` — one row per person who can log in; stores their email and a scrambled (never
   reversible) version of their password
-- `categories` — the budgeting categories you sort transactions into, one set per user. New
-  accounts start with none; every category is created by the user on the Categories screen
-  (`POST /api/categories`)
+- `categories` — **no longer used by the app** (since issue #33). It held the budgeting
+  categories you used to sort transactions into, one set per user. It's kept so existing data
+  isn't lost; nothing reads or writes it now
 - `plaid_items` — one row per bank a user has connected; holds the credential Plaid gave us for
   that connection (encrypted -- see the Plaid section below) and a bookmark ("cursor," see below) of
   how far we've synced
 - `plaid_accounts` — the individual accounts (checking, savings, etc.) that belong to a connected
   bank
-- `transactions` — one row per transaction, linked to which account it came from, (optionally)
-  which category you assigned it, and its `review_status`: empty until you swipe its card on
-  Overview, then `reimburse` or `clear`
+- `transactions` — one row per transaction, linked to which account it came from. Its
+  `review_status` is empty until you swipe its card on Overview, then `reimburse` or `clear`. Its
+  `reimbursed_at` is set when you check a `reimburse` item off on To Do (empty = still on the
+  list). Its old `category_id` is kept but no longer used
 - `push_subscriptions` — one row per browser/device that's agreed to receive push notifications for
   a user (someone could have several: phone, laptop, ...)
 - `login_attempts` — recent login/signup attempts, used to block a burst of them (see Login above)
 
-`categories`, `plaid_items`, and `push_subscriptions` have a `user_id` column directly. `plaid_accounts` and
+`categories` (unused), `plaid_items`, and `push_subscriptions` have a `user_id` column directly. `plaid_accounts` and
 `transactions` don't repeat it -- their owner is found by following the chain down to `plaid_items`
 instead (e.g. a transaction's owner is whoever owns the `plaid_items` row its account belongs to).
 Every query that lists or edits this data filters (or double-checks ownership) using that chain, so
@@ -240,16 +233,18 @@ one user's data is never visible or editable by another.
    anything new since last time using a "cursor" — think of it like a bookmark: each response comes
    with a new cursor to save and send back next time, so Plaid only has to tell us what changed
    instead of resending everything. New/changed transactions are saved with an "upsert" (insert it
-   if it's new, update it if it already exists) — and updating deliberately never overwrites a
-   category you already picked by hand.
+   if it's new, update it if it already exists) — and updating deliberately never overwrites
+   what you decided (`review_status`, `reimbursed_at`).
 5. Disconnecting a bank (Settings → Disconnect) calls `DELETE /api/plaid/items/[id]`, which checks
    the item belongs to you, tells Plaid to revoke it (`itemRemove`), and only then deletes the local
-   `plaid_items` row -- cascading to its accounts and all their transactions, categorized or not.
+   `plaid_items` row -- cascading to its accounts and all their transactions, reviewed or not.
    If Plaid's call fails the local row is kept so you can retry (unless Plaid says the item is
    already gone, which counts as success).
-6. `PATCH /api/transactions/[id]` saves changes to one transaction: the category dropdown on the
-   category detail pages sends `categoryId`, and swiping a card on Overview sends `reviewStatus`
-   (`null` on Undo). Fields left out of the request are left unchanged.
+6. `PATCH /api/transactions/[id]` saves changes to one transaction. Swiping a card on Overview
+   sends `reviewStatus` (`null` on Undo). Pressing the checkmark on To Do sends
+   `reimbursed: true` (`false` on Undo), and the server records the current time as
+   `reimbursed_at`; only a `reimburse` transaction can be marked reimbursed. Fields left out of the
+   request are left unchanged.
 
 ### Push notifications
 The actual "notify me the moment I spend money" feature. Three pieces:
@@ -280,7 +275,7 @@ The actual "notify me the moment I spend money" feature. Three pieces:
    notification (`src/lib/web-push.ts`, using the VAPID keys) to every one of that user's saved
    subscriptions. `public/sw.js`'s `push` handler is what actually displays it, and tapping it opens
    the app straight to that transaction on Overview (`/#transaction-<id>`, or just `/` for the combined "N new transactions" summary), where the card deck opens on that transaction's card --
-   full in-notification category buttons were considered but skipped for now (see DECISIONS.md):
+   full in-notification buttons were considered but skipped for now (see DECISIONS.md):
    browsers only allow ~2 actions directly on a notification, and iOS doesn't support them at all.
 
 ## Security headers
@@ -344,8 +339,9 @@ from ever reaching the app. This app's own Auth.js login is what actually protec
 financial data now.
 
 ## Not yet built
-- In-notification quick-action category buttons (tapping a notification opens the app to
-  categorize instead -- see "Push notifications" above)
+- In-notification quick-action buttons (tapping a notification opens the app to review the
+  transaction instead -- see "Push notifications" above)
+- Opening a To Do item for further actions (the row's left side is reserved for it)
 - Any other planned productivity-hub features beyond the financial tracking (the to-do list was
   dropped -- see DECISIONS.md)
 - Password change, email change, account deletion (Settings only has bank management, the notifications toggle, and sign-out)

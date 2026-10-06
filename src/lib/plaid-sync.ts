@@ -81,10 +81,9 @@ export async function syncPlaidItem(item: PlaidItemRow) {
       // with the same plaidTransactionId already exists. `excluded` below
       // is Postgres's name for "the row we were about to insert" -- this is
       // the standard way to write an upsert in Postgres. Deliberately NOT
-      // updating categoryId here: if you've already picked a category for a
-      // transaction and Plaid later marks it "modified" (e.g. it goes from
-      // pending to posted), we don't want that update to erase the category
-      // you chose.
+      // updating reviewStatus, reimbursedAt or categoryId here: if you've
+      // already reviewed a transaction and Plaid later marks it "modified",
+      // we don't want that update to erase what you decided.
       const saved = await db
         .insert(transactions)
         .values(upsertRows)

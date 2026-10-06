@@ -81,7 +81,7 @@ white. All of these are starting values, to confirm on a real iPhone when the ap
 
 ## Structure and components
 
-- **Tab bar** (bottom, always visible on top-level screens): Overview, Categories, Settings. Each
+- **Tab bar** (bottom, always visible on top-level screens): Overview, To Do, Settings. Each
   tab is an icon over an 10–11px label. The selected tab is tinted; the others are secondary label
   color. The bar has a translucent blurred background, a top hairline, and bottom safe-area
   padding. Icons are [Lucide](https://lucide.dev) at stroke-width 1.5–2. Apple's own SF Symbols
@@ -89,8 +89,8 @@ white. All of these are starting values, to confirm on a real iPhone when the ap
   them (tabs, row accessories, empty states).
 - **Large title**: each tab's screen opens with its name as a Large Title at the top of the
   scrolling content. Collapsing it into a small centered title while scrolling is optional polish.
-- **Pushed screens** (e.g. one category's transactions): a top navigation bar with a tinted
-  "‹ Categories" back button and a centered Headline title.
+- **Pushed screens** (e.g. a bank's screen inside Settings): a top navigation bar with a tinted
+  "‹ Settings" back button and a centered Headline title.
 - **Grouped inset list**: the main container, replacing the old bordered cards. Rounded (10px)
   sections on the grouped background, inset from the screen edges. Rows are at least 44px tall,
   separated by hairlines that start at the text's left edge. Optional section header above
@@ -101,13 +101,19 @@ white. All of these are starting values, to confirm on a real iPhone when the ap
 - **Buttons**: mostly plain tinted text, like "Edit" or "+" in a nav bar, or a tinted row such as
   "Connect a Bank". A filled tint button (full width, 50px tall, 12px corners) is only for the one
   main action of a screen or sheet. Destructive buttons use red text.
-- **Sheets**: creating and editing (New Category, Rename, ...) happen in a sheet that slides up from
+- **Sheets**: creating and editing (naming something, renaming it, ...) happen in a sheet that slides up from
   the bottom. It has rounded top corners, a grabber, and dims the screen behind it. Its top bar
   holds Cancel (left), a Headline title (center), and Save/Done (right, semibold, disabled until
   the input is valid).
 - **Swipe actions**: swiping a list row left reveals a red **Delete** button. Deleting anything
   whose effects aren't obvious asks first, with an iOS action sheet: a panel from the bottom with
-  a red "Delete Category" button and Cancel.
+  a red "Delete …" button and Cancel.
+- **Row buttons**: an action on one list item (e.g. checking a To Do item off) is a tinted
+  Lucide icon button at the row's right end, with a 44×44 tap area. The rest of the row stays free
+  for opening the item.
+- **Undo banner**: after an action that removes something from a list (swiping a card, checking
+  an item off), a floating "… · Undo" banner shows above the tab bar for 5 seconds, instead of
+  asking first.
 - **Switch**: on/off settings (e.g. Notifications) use an iOS-style toggle switch in the row, tinted
   when on.
 - **Empty state**: centered in the available space, with a large secondary-color icon, a Headline
