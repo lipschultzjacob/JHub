@@ -75,7 +75,9 @@ detail in docs/ARCHITECTURE.md; the load-bearing points for making changes corre
 - **Multi-tenancy**: `categories` and `plaid_items` carry `user_id` directly; `plaid_accounts` and
   `transactions` don't repeat it — ownership is found by joining down to `plaid_items`. Every query
   that touches this data must filter (or verify ownership) through that chain.
-- **Deployment**: Vercel (app) + Neon (production Postgres). Auto-deploy on push to `main` is
+- **Deployment**: Vercel (app) + Neon (production Postgres). **Production is currently offline**
+  (all deployments removed 2026-10-05 while the app is refocused; project, env vars and database
+  kept -- see docs/ARCHITECTURE.md "Deployment"). Auto-deploy on push to `main` is
   turned off (Vercel project settings → Git → "Ignored Build Step" is set to always skip); deploys
   are manual via `npx vercel --prod`, so pushing to `main` — including revert commits — no longer
   ships anything by itself. Vercel secrets are stored as "Non-sensitive" rather than "Sensitive" —

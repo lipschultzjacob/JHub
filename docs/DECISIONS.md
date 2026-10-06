@@ -728,3 +728,18 @@ is needed because a swipe is now a decision, not just navigation.
 - **Gotcha: `next start` locally talks to production.** Production mode loads
   `.env.production.local`, so `npm run start` / `next start` on this machine uses the Neon
   `DATABASE_URL`. Use `npm run dev` for local testing.
+
+## 2026-10-05 — Production taken offline during the reimbursement refocus
+
+**Decision:** All of the `j-hub` project's Vercel deployments were removed, so the live addresses
+return 404. The Vercel project (settings, environment variables) and the Neon database were kept.
+
+**Why:** The user's call. The app isn't ready to be live mid-refocus, and with signup open,
+anyone with the address could create an account.
+
+**Tradeoffs:**
+- Bringing it back is cheap: apply pending migrations to production, then `npx vercel --prod`.
+  The removed deployments themselves can't be restored, but a redeploy builds a fresh one from
+  the current code.
+- The Neon database and any Plaid connections stored in it stay in place. If a real bank was
+  connected there, Plaid still considers that connection active until it's removed.

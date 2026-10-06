@@ -314,7 +314,13 @@ against it directly from your machine.
 
 ## Deployment
 
-The app is live at **https://j-hub-lippy-industries.vercel.app**, deployed to Vercel (project
+**Currently offline (since 2026-10-05).** All deployments were removed while the app is
+refocused on reimbursements, so the addresses below return 404 for now. The Vercel project
+(settings and environment variables) and the Neon database were kept, so bringing it back is
+just: apply any pending migrations to production (below), then `npx vercel --prod`. Migration
+0005 (`review_status`) has not been applied to production yet.
+
+When deployed, the app is served at **https://j-hub-lippy-industries.vercel.app**, deployed to Vercel (project
 `j-hub` under the `lippy-industries` account) with its database on Neon. Pushing to `main` on
 GitHub does *not* trigger a deploy -- Vercel's project settings have "Ignored Build Step" (Settings
 → Git) set to always skip, so every push just updates the repo. Deploying is a separate, manual
