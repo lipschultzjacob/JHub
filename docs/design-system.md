@@ -112,10 +112,10 @@ white. All of these are starting values, to confirm on a real iPhone when the ap
   when on.
 - **Empty state**: centered in the available space, with a large secondary-color icon, a Headline
   title, and one Subheadline sentence (plus a tinted button if there's an obvious next step).
-- **Overview's sort deck** is the one deliberate custom (non-stock-iOS) interaction: a stack of
-  transaction cards; hold the top card and drag it onto a 3x2 grid of categories. Its exact
-  behavior and styling are in `docs/design/components.md` ("Sort deck"). It follows the same
-  tokens: tint for the highlighted cell, green for money in, soft rounded cards.
+- **Overview's card deck** is the one deliberate custom (non-stock-iOS) interaction: a stack of
+  transaction cards you swipe through. Its exact behavior and styling are in
+  `docs/design/components.md` ("Sort deck"). It follows the same tokens: green for money in,
+  soft rounded cards.
 
 ## Motion
 

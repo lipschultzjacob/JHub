@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { and, asc, count, desc, eq, isNull } from "drizzle-orm";
-import { Landmark, Tags } from "lucide-react";
+import { and, desc, eq, isNull } from "drizzle-orm";
+import { Landmark } from "lucide-react";
 import { db } from "@/db";
-import { transactions, plaidAccounts, plaidItems, categories } from "@/db/schema";
+import { transactions, plaidAccounts, plaidItems } from "@/db/schema";
 import { auth } from "@/auth";
 import { LargeTitle } from "@/components/large-title";
 import { EmptyState } from "@/components/empty-state";
@@ -14,10 +14,9 @@ import { OverviewDeck } from "@/components/overview-deck";
 export const dynamic = "force-dynamic";
 
 // The Overview screen ("/"): your transactions that don't have a category
-// yet, as a deck of cards to sort (OverviewDeck / SortDeck): swipe through
-// them, hold one and drag it onto a category. Or, when there's nothing to
-// sort with or nothing to sort, an empty state saying why: no bank connected
-// yet, no categories yet, or all caught up.
+// yet, as a deck of cards to swipe through (OverviewDeck / SortDeck). Or,
+// when there's nothing to show, an empty state saying why: no bank connected
+// yet, or all caught up.
 //
 // This is a "Server Component" (see ARCHITECTURE.md): it queries the database
 // directly on the server and hands the results to the deck, which runs in the
@@ -30,17 +29,6 @@ export default async function OverviewPage() {
   // Which banks this user has connected (only used to pick the right empty
   // state below).
   const items = await db.select({ id: plaidItems.id }).from(plaidItems).where(eq(plaidItems.userId, userId));
-
-  // This user's categories, most-used first (by how many transactions each
-  // holds; ties alphabetical) -- the sorting grid shows the top ones. LEFT
-  // join so unused categories still appear, with a count of 0.
-  const ranked = await db
-    .select({ id: categories.id, name: categories.name, used: count(transactions.id) })
-    .from(categories)
-    .leftJoin(transactions, eq(transactions.categoryId, categories.id))
-    .where(eq(categories.userId, userId))
-    .groupBy(categories.id, categories.name)
-    .orderBy(desc(count(transactions.id)), asc(categories.name));
 
   // This user's unsorted transactions (categoryId IS NULL), newest first, with
   // each one's account name attached. The two inner joins also enforce
@@ -74,16 +62,6 @@ export default async function OverviewPage() {
         action={<Link href="/settings" className={linkButton}>Go to Settings</Link>}
       />
     );
-  } else if (rows.length > 0 && ranked.length === 0) {
-    // Transactions are waiting, but there's nothing to sort them into.
-    body = (
-      <EmptyState
-        icon={Tags}
-        title="No Categories Yet"
-        message={`${rows.length} ${rows.length === 1 ? "transaction is" : "transactions are"} waiting. Create a category to start sorting.`}
-        action={<Link href="/categories" className={linkButton}>Go to Categories</Link>}
-      />
-    );
   } else {
     // The deck shows its own "All Caught Up" once there's nothing left.
     body = (
@@ -96,7 +74,6 @@ export default async function OverviewPage() {
           accountName: r.accountName,
           pending: r.pending,
         }))}
-        categories={ranked.map((c) => ({ id: c.id, name: c.name }))}
       />
     );
   }

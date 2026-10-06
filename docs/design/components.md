@@ -82,7 +82,7 @@ sentence, and an optional tinted button. Every list uses one of these when it's 
 
 ## Sort deck (Overview) — `src/components/sort-deck.tsx`
 
-`<SortDeck transactions={...} categories={rankedMostUsedFirst} assign={save} emptyState={...} />`
+`<SortDeck transactions={...} emptyState={...} initialTransactionId={...} />`
 (wired up by `overview-deck.tsx`). This is a custom interaction, tuned on the iPhone:
 
 - **Deck:** the top card, with up to 3 more behind it. Each step back is 5% smaller and 14px lower
@@ -94,19 +94,10 @@ sentence, and an optional tinted button. Every list uses one of these when it's 
 - **Swipe:** left flies the top card off (tilting) to show the next; right brings the previous card
   back on top. It commits past 25% of the width or on a fast flick, otherwise springs back. The
   first/last card resists.
-- **Hold (400ms, finger still):** a full-screen dimmed overlay with a **3×2 grid of equal cells**
-  (26px corners, 82% elevated surface, blurred) holding the 5 most-used categories plus
-  "More…", or all 6 if there are six or fewer. A round **✕** (60px) sits dead center to cancel.
-  The hovered cell turns solid tint with `text-on-accent` and grows 3%. A small tilted copy of the
-  card follows the finger; over the ✕ it shrinks away so only the darkened ✕ shows. The deck
-  behind fades to 8%.
-- **Drop:** a category sorts it (the card hides instantly, and the save runs in the background; on
-  failure it comes back with an error). "More…" opens a "Sort Into" sheet listing the rest. The
-  ✕ or a gap cancels. After each sort, a "Sorted into X · Undo" banner shows above the tab bar
-  for 5s.
-- `touch-action: none`, no text selection, and no long-press callout on the deck and grid, so the
-  browser never scrolls or selects mid-gesture. Hit-testing uses `document.elementFromPoint` on
-  `[data-drop]` targets.
+- **No sorting gesture for now.** The hold-and-drag category grid was removed (see
+  docs/DECISIONS.md, 2026-10-05); a "N of M" count sits under the deck.
+- `touch-action: none`, no text selection, and no long-press callout on the deck, so the
+  browser never scrolls or selects mid-gesture.
 - Shapes, shadows and motion are **inline styles**, which render the same on every iPhone (see
   docs/DECISIONS.md).
 

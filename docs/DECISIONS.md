@@ -674,3 +674,23 @@ picks one drag away, while "More…" keeps every category reachable.
   inline versions have rendered consistently on the phone.
 - **The cell order can shift** as habits change, because it's ranked by usage, which works
   against muscle memory.
+
+## 2026-10-05 — Rescope toward reimbursements; hold-and-drag category sorting removed
+
+**Decision:** The app is being refocused on one job: organizing transactions into **ones that need
+to be reimbursed** and **ones that don't**. As the first step, Overview's hold-and-drag category grid
+(the 2026-10-01 entry above) is removed. The card deck itself stays (swipe left = next, right =
+back), as does the notification deep link that opens it on a given card. The "More…" sheet, the
+"Sorted into … · Undo" banner, the hint text under the deck, and the "No Categories Yet" empty
+state (which only existed because sorting needed a category to drop onto) went with it.
+
+**Why:** The user's call. A 6-cell category grid fits general budgeting. With the new two-way
+reimbursable/not split, the deck will get a different sorting interaction, which hasn't been
+designed yet.
+
+**Tradeoffs:**
+- **For now, Overview can't sort anything.** The deck still shows uncategorized transactions, but
+  nothing removes a card from it until the reimbursement interaction is built. Categories can
+  still be set from a category's own screen.
+- Categories (the tab, the table, `PATCH /api/transactions/[id]`) are untouched for now. Whether
+  they stay alongside reimbursement status or get replaced is a later decision.
