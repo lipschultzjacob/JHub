@@ -232,9 +232,15 @@ one user's data is never visible or editable by another.
    the work, so the fetching logic itself only exists in one place. That function asks Plaid for
    anything new since last time using a "cursor" — think of it like a bookmark: each response comes
    with a new cursor to save and send back next time, so Plaid only has to tell us what changed
-   instead of resending everything. New/changed transactions are saved with an "upsert" (insert it
-   if it's new, update it if it already exists) — and updating deliberately never overwrites
-   what you decided (`review_status`, `reimbursed_at`).
+   instead of resending everything. Plaid returns changes a page at a time; the function reads
+   **every** page first and only then saves, because related changes can land on different pages.
+   New/changed transactions are saved with an "upsert" (insert it if it's new, update it if it
+   already exists) — and updating deliberately never overwrites what you decided
+   (`review_status`, `reimbursed_at`). **Pending → posted:** when a pending charge posts, Plaid
+   *removes* the pending transaction and *adds* the posted one under a new ID, whose
+   `pending_transaction_id` points back at the pending one. Before the pending row is deleted, its
+   `review_status`/`reimbursed_at` are copied onto the posted row (only between rows on the same
+   bank connection), and the posted one doesn't trigger a second push notification.
 5. Disconnecting a bank (Settings → Disconnect) calls `DELETE /api/plaid/items/[id]`, which checks
    the item belongs to you, tells Plaid to revoke it (`itemRemove`), and only then deletes the local
    `plaid_items` row -- cascading to its accounts and all their transactions, reviewed or not.

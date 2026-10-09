@@ -772,3 +772,33 @@ into a transaction later. Keeping the category data avoids a destructive migrati
   Carrying the decision over (via Plaid's `pending_transaction_id`) would fix it.
 - The shared "… · Undo" banner was pulled out of the deck into `undo-banner.tsx` so both screens
   use the same one.
+
+## 2026-10-08 — Pending → posted keeps your review decision (issue #34)
+
+**Decision:** When a pending charge posts, Plaid's `/transactions/sync` removes the pending
+transaction and adds the posted one as a new transaction (new `transaction_id`, with
+`pending_transaction_id` pointing back). `syncPlaidItem` now copies the pending row's
+`review_status` and `reimbursed_at` onto the posted row before deleting the pending row. A posted
+charge that replaces a pending one we already had doesn't send another push notification, whether
+or not the pending one had been reviewed.
+
+**Why:** Without this, a pending charge you'd swiped "reimburse" vanished from To Do, its posted
+version came back to the Overview deck unreviewed, and you got notified about it twice.
+
+**How it works / tradeoffs:**
+- **Read every page, then save.** Plaid's docs say the removal and the addition "aren't guaranteed
+  to be in the same page, but should happen within the same overall update." So the sync now
+  gathers all pages into one "last change per transaction" map before writing anything. Before,
+  it saved each page as it arrived, which could delete the pending row before the posted row on a
+  later page had a chance to copy from it. Writes are sent in batches of 500 to stay under
+  Postgres's limit on values per query.
+- **Different syncs aren't handled.** If a bank ever reported the removal and the addition in
+  separate sync updates, the pending row would already be gone and the decision would be lost.
+  Plaid says this shouldn't happen, so we didn't add a soft-delete or a lookup table for it.
+- **Retry-safe.** On an existing row, the upsert fills in `review_status`/`reimbursed_at` only if
+  the row hasn't been reviewed yet. So a sync that failed halfway can be re-run and still carry
+  the decision over, and a "modified" update can never erase a decision.
+- **Same bank connection only.** The pending-row lookup and the deletes are limited to this
+  item's accounts.
+- **Notification rule:** no notification for a posted charge whose pending row we had. If the
+  pending row was never synced (no match), the posted one counts as new and notifies as before.
